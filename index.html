@@ -91,7 +91,7 @@
     border: 1px solid rgba(70, 224, 255, 0.16);
     border-radius: 14px; padding: 8px 26px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-    min-width: 160px; }
+    min-width: 180px; }
   #waveNum { font-size: 10px; letter-spacing: 3px; color: #7b8ba3;
     text-transform: uppercase; font-weight: 600; }
   #waveNum .num { color: #ffb454; font-size: 13px; }
@@ -101,6 +101,8 @@
   #waveCountdown.warning { color: #ff8a5a; text-shadow: 0 0 14px rgba(255, 130, 90, 0.6); }
   #waveCountdown.danger { color: #ff5a6e; text-shadow: 0 0 18px rgba(255, 90, 110, 0.7);
     animation: pulse 0.7s ease-in-out infinite; }
+  #waveCountdown.assault { color: #ff3a5e; text-shadow: 0 0 24px rgba(255, 60, 90, 0.9);
+    animation: pulse 0.5s ease-in-out infinite; letter-spacing: 2px; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
   #hpBox { margin-left: auto; display: flex; flex-direction: column; gap: 4px;
@@ -282,6 +284,19 @@
     box-shadow: 0 8px 30px rgba(80, 240, 160, 0.25); }
   #saveToast.show { opacity: 1; }
 
+  #assaultBanner { position: fixed; top: 130px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(120, 10, 30, 0.95), rgba(60, 5, 15, 0.95));
+    border: 2px solid rgba(255, 90, 110, 0.7);
+    color: #ffb8c2; font-size: 18px; font-weight: 900; letter-spacing: 6px;
+    padding: 14px 40px; border-radius: 12px; text-transform: uppercase;
+    opacity: 0; pointer-events: none; z-index: 55;
+    box-shadow: 0 10px 50px rgba(255, 30, 60, 0.5), inset 0 0 30px rgba(255, 60, 90, 0.2);
+    transition: opacity .4s ease, transform .4s ease;
+    text-shadow: 0 0 20px rgba(255, 90, 110, 0.9); }
+  #assaultBanner.show { opacity: 1; transform: translateX(-50%) scale(1.05); }
+  #assaultBanner .sub { font-size: 11px; letter-spacing: 3px; color: #ff8a9a;
+    display: block; margin-top: 4px; text-transform: none; font-weight: 600; }
+
   #gameover { position: fixed; inset: 0; z-index: 100; display: none;
     flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     background: radial-gradient(ellipse at center, rgba(80,0,20,0.6), rgba(5,3,8,0.97));
@@ -300,6 +315,26 @@
   #gameover button.secondary { background: transparent; border: 1px solid rgba(70,224,255,0.4);
     color: #7ee8ff; box-shadow: none; }
   #gameover button.secondary:hover { background: rgba(70,224,255,0.12); }
+
+  #tutorialBox { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(10, 16, 26, 0.96);
+    border: 1px solid rgba(70, 224, 255, 0.4);
+    border-radius: 14px; padding: 16px 20px; max-width: 540px; z-index: 60;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 40px rgba(70, 224, 255, 0.15);
+    pointer-events: auto; }
+  #tutorialBox .tut-step { font-size: 11px; letter-spacing: 2px; color: #7b8ba3; margin-bottom: 6px; }
+  #tutorialBox .tut-text { font-size: 14px; color: #eaf4ff; line-height: 1.5; margin-bottom: 8px; }
+  #tutorialBox .tut-tip { font-size: 11px; color: #5f7089; line-height: 1.4; margin-bottom: 12px; }
+  #tutorialBox .tut-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+  #tutorialBox .tut-btn { padding: 6px 16px; border-radius: 7px; font-family: inherit;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px; cursor: pointer; }
+  #tutorialBox .tut-btn.skip { background: transparent; border: 1px solid rgba(120,140,160,0.4);
+    color: #7b8ba3; }
+  #tutorialBox .tut-btn.skip:hover { border-color: rgba(120,140,160,0.6); color: #b8c8dc; }
+  #tutorialBox .tut-btn.next { background: linear-gradient(135deg, #46e0ff, #2aa8d8);
+    border: none; color: #04121c; }
+  #tutorialBox .tut-btn.next:hover { box-shadow: 0 0 20px rgba(70, 224, 255, 0.5); }
 </style>
 </head>
 <body>
@@ -316,7 +351,7 @@
     </div>
   </div>
   <div class="title-footnote">左键放置 · 长按左键拆除 · 右键查看属性 · 点击敌人优先锁定</div>
-  <div class="title-version">v0.8</div>
+  <div class="title-version">v0.9</div>
 </div>
 
 <div id="hud">
@@ -359,6 +394,7 @@
 </div>
 
 <div id="saveToast">已保存</div>
+<div id="assaultBanner">总攻来袭<span class="sub" id="assaultBannerSub"></span></div>
 
 <div id="gameover">
   <h1>基地失守</h1>
@@ -391,13 +427,16 @@ const BATTERY_MAX_CHARGE = 100, BATTERY_CHARGE_RATE = 8, BATTERY_DRAIN_RATE = 5;
 const GRIDGEN_RADIUS = 4, GRIDGEN_RADIUS_LV2 = 6;
 const MECH_PARALYZE_RANGE = 3.5, MECH_HEAL_RANGE = 3.0, MECH_HEAL_RATE = 45;
 const BOSS_SPAWN_WAVE = 5, BOSS_SPAWN_INTERVAL = 3;
-const FLYING_SPAWN_WAVE = 3;
-const FLYING_HEIGHT = 2.6;
-const SAVE_KEY = 'factoryFrontierSaveV3';
+const FLYING_SPAWN_WAVE = 3, FLYING_HEIGHT = 2.6;
+const ASSAULT_START_WAVE = 4;    // 从第 4 波开始总攻
+const POWER_RECALC_INTERVAL_MS = 200;
+const SAVE_KEY = 'factoryFrontierSaveV4';
+const TUTORIAL_KEY = 'factoryFrontierTutorialDone';
 const AUTOSAVE_INTERVAL = 12;
 
 const DIRS = [{x:1,z:0},{x:0,z:1},{x:-1,z:0},{x:0,z:-1}];
 const DIR_NAMES = ['东', '南', '西', '北'];
+const SIDE_NAMES = ['北侧', '南侧', '西侧', '东侧'];  // 0:N, 1:S, 2:W, 3:E
 const ORE_NONE = 0, ORE_IRON = 1, ORE_COPPER = 2, ORE_COAL = 3;
 
 const ITEM_INFO = {
@@ -476,10 +515,12 @@ const UPGRADES = {
 const UNUPGRADABLE = new Set(['cable']);
 
 const BOSS_VARIANTS = {
-  original:   { name: '巨型爬虫',      legs: 6,  hpMul: 1.00, speed: 0.42, bodyColor: 0x6b2338, coreColor: 0xff5a6e, canHealInGrid: false, breathExplodesBatteries: false, disablesGrid: false },
-  mechanical: { name: '机械爬虫变种',  legs: 10, hpMul: 1.35, speed: 0.32, bodyColor: 0x3a4a6a, coreColor: 0x6aa8ff, canHealInGrid: true,  breathExplodesBatteries: false, disablesGrid: true  },
-  mutated:    { name: '变异爬虫',      legs: 8,  hpMul: 1.18, speed: 0.37, bodyColor: 0x6a3a5a, coreColor: 0xff4aaa, canHealInGrid: false, breathExplodesBatteries: true,  disablesGrid: false },
+  original:   { name: '巨型爬虫',      legs: 6,  hpMul: 1.00, bodyColor: 0x6b2338, coreColor: 0xff5a6e, canHealInGrid: false, breathExplodesBatteries: false, disablesGrid: false },
+  mechanical: { name: '机械爬虫变种',  legs: 10, hpMul: 1.35, bodyColor: 0x3a4a6a, coreColor: 0x6aa8ff, canHealInGrid: true,  breathExplodesBatteries: false, disablesGrid: true  },
+  mutated:    { name: '变异爬虫',      legs: 8,  hpMul: 1.18, bodyColor: 0x6a3a5a, coreColor: 0xff4aaa, canHealInGrid: false, breathExplodesBatteries: true,  disablesGrid: false },
 };
+// 腿越多越快
+function bossSpeed(V) { return 0.42 * (V.legs / 6); }
 
 /* ═══════════════════════════════════════════════════════════
    2. 音频
@@ -487,7 +528,6 @@ const BOSS_VARIANTS = {
 let audioCtx = null;
 let audioEnabled = true;
 const soundThrottle = {};
-
 function initAudio() {
   if (!audioCtx) {
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -588,7 +628,7 @@ document.addEventListener('pointerdown', initAudio, { once: true });
 document.addEventListener('keydown', initAudio, { once: true });
 
 /* ═══════════════════════════════════════════════════════════
-   3. 渲染器 / 场景 / 相机
+   3. 渲染器
    ═══════════════════════════════════════════════════════════ */
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -612,8 +652,7 @@ const camRightFlat = new THREE.Vector3(1, 0, -1).normalize();
 
 function updateCamera() {
   const aspect = window.innerWidth / window.innerHeight;
-  const vh = 25 / camZoom;
-  const vw = vh * aspect;
+  const vh = 25 / camZoom, vw = vh * aspect;
   camera.left = -vw/2; camera.right = vw/2; camera.top = vh/2; camera.bottom = -vh/2;
   camera.updateProjectionMatrix();
   camera.position.copy(camTarget).add(CAM_OFFSET);
@@ -635,7 +674,7 @@ const rimLight = new THREE.DirectionalLight(0x46e0ff, 0.35);
 rimLight.position.set(0, 5, -20); scene.add(rimLight);
 
 /* ═══════════════════════════════════════════════════════════
-   4. 材质库
+   4. 材质
    ═══════════════════════════════════════════════════════════ */
 const MAT = {
   dark:   new THREE.MeshStandardMaterial({ color: 0x2b3140, roughness: 0.72, metalness: 0.55 }),
@@ -844,9 +883,10 @@ const MODELS = {
     const top = new THREE.Mesh(new THREE.OctahedronGeometry(0.15), MAT.glow);
     top.position.y = 1.22; g.add(top);
     g.userData.top = top;
-    const aura = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.025, 6, 32),
-      new THREE.MeshBasicMaterial({ color: 0x46e0ff, transparent: true, opacity: 0.4, depthWrite: false }));
-    aura.rotation.x = Math.PI / 2; aura.position.y = 0.06; g.add(aura);
+    // 光环：只在需要时显示（避免每帧 alpha 排序）
+    const auraMat = new THREE.MeshBasicMaterial({ color: 0x46e0ff, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+    const aura = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.97, 32), auraMat);
+    aura.rotation.x = -Math.PI / 2; aura.position.y = 0.05; g.add(aura);
     g.userData.aura = aura;
     return g;
   },
@@ -899,7 +939,6 @@ const MODELS = {
     const head = new THREE.Group(); head.position.y = 0.38;
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.3, 0.44), MAT.mid);
     body.castShadow = true; head.add(body);
-    // 双管防空炮，仰角
     for (const sz of [-0.13, 0.13]) {
       const barrelGeo = new THREE.CylinderGeometry(0.052, 0.068, 0.68, 8);
       barrelGeo.rotateZ(Math.PI / 2);
@@ -908,8 +947,7 @@ const MODELS = {
       barrel.rotation.z = -0.6;
       barrel.castShadow = true; head.add(barrel);
       const tip = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), MAT.green);
-      tip.position.set(0.62, 0.28, sz);
-      head.add(tip);
+      tip.position.set(0.62, 0.28, sz); head.add(tip);
     }
     const radar = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 4, 12), MAT.green);
     radar.position.set(-0.2, 0.24, 0); radar.rotation.y = Math.PI / 4;
@@ -988,12 +1026,16 @@ function getItemMat(kind) {
 const state = {
   iron: 40, copper: 40, coal: 15, stone: 60,
   ironOre: 0, copperOre: 0,
-  researchPoints: 0,
-  techs: {},
-  difficulty: 'hard',
+  researchPoints: 0, techs: {}, difficulty: 'hard',
   wave: 0, waveTimer: 60,
   inWave: false, spawnRemaining: 0, spawnTimer: 0,
   gameOver: false,
+  // 总攻追踪
+  assaultSide: null,      // 本次总攻的侧边，null=普通波
+  assaultActive: false,
+  // 侧边历史（最近 2 波）
+  sideHistory: [],
+  currentWaveSideDist: [Infinity, Infinity, Infinity, Infinity],
 };
 
 const tileType = new Uint8Array(GRID * GRID);
@@ -1002,14 +1044,8 @@ const buildings = [];
 const buildingsByType = {};
 for (const type of Object.keys(BUILDING_DEFS)) buildingsByType[type] = [];
 
-const enemies = [];
-const bosses = [];
-const bullets = [];
-const particles = [];
-const demolishMeshes = [];
-const explosions = [];
-const arcBeams = [];
-const shockwaves = [];
+const enemies = [], bosses = [], bullets = [], particles = [];
+const demolishMeshes = [], explosions = [], arcBeams = [], shockwaves = [];
 
 let baseBuilding = null;
 let terrainMesh = null;
@@ -1017,7 +1053,7 @@ const oreMeshes = [];
 let gameStarted = false;
 let autosaveTimer = 0;
 let priorityTarget = null;
-let frameCounter = 0;
+let inspectedBuilding = null;
 
 const idx = (gx, gz) => gz * GRID + gx;
 const inBounds = (gx, gz) => gx >= 0 && gz >= 0 && gx < GRID && gz < GRID;
@@ -1051,14 +1087,8 @@ function generateTerrain() {
 }
 
 function removeTerrainMesh() {
-  if (terrainMesh) {
-    scene.remove(terrainMesh);
-    terrainMesh.geometry?.dispose(); terrainMesh.material?.dispose();
-    terrainMesh = null;
-  }
-  for (const m of oreMeshes) {
-    scene.remove(m); m.geometry?.dispose(); m.material?.dispose();
-  }
+  if (terrainMesh) { scene.remove(terrainMesh); terrainMesh.geometry?.dispose(); terrainMesh.material?.dispose(); terrainMesh = null; }
+  for (const m of oreMeshes) { scene.remove(m); m.geometry?.dispose(); m.material?.dispose(); }
   oreMeshes.length = 0;
 }
 
@@ -1141,7 +1171,6 @@ function getPerimeterCells(b) {
   }
   return cells;
 }
-
 function getBuildingOutputCells(b) {
   const outputs = [];
   for (const cell of getPerimeterCells(b)) {
@@ -1160,7 +1189,7 @@ function getBuildingOutputCells(b) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   9. 科技 / 解锁
+   9. 科技
    ═══════════════════════════════════════════════════════════ */
 function isBuildingUnlocked(type) {
   if (BASIC_BUILDINGS.includes(type)) return true;
@@ -1219,8 +1248,7 @@ function addBuilding(type, gx, gz, rot, skipAnim = false) {
   const def = BUILDING_DEFS[type];
   const [w, h] = def.size;
   const b = {
-    type, gx, gz, w, h, rot,
-    level: 1,
+    type, gx, gz, w, h, rot, level: 1,
     hp: def.hp, maxHp: def.hp,
     mesh: null, item: null, timer: 0,
     ironBuffer: 0, copperBuffer: 0, processing: null, lastProcessed: null,
@@ -1229,8 +1257,7 @@ function addBuilding(type, gx, gz, rot, skipAnim = false) {
     charge: 0, maxCharge: BATTERY_MAX_CHARGE, isCharging: false,
     powered: false, disabled: false, cooldown: 0,
     buildAnim: skipAnim ? null : { t: 0, duration: 0.45 },
-    meshMaterials: [], pendingRemove: false,
-    upgradeMarker: null,
+    meshMaterials: [], pendingRemove: false, upgradeMarker: null,
   };
   const wx = gx - HALF + w / 2, wz = gz - HALF + h / 2;
   const mesh = createBuildingMesh(type);
@@ -1261,6 +1288,7 @@ function addBuilding(type, gx, gz, rot, skipAnim = false) {
 
   buildings.push(b);
   buildingsByType[type].push(b);
+  markPowerDirty();
   return b;
 }
 
@@ -1277,6 +1305,7 @@ function removeBuilding(b, animate = true) {
   if (animate) demolishMeshes.push({ mesh: b.mesh, t: 0, duration: 0.32 });
   else scene.remove(b.mesh);
   if (inspectedBuilding === b) hideInspector();
+  markPowerDirty();
 }
 
 function damageBuilding(b, amount) {
@@ -1295,13 +1324,13 @@ function damageBuilding(b, amount) {
 function upgradeBuilding(b) {
   if (!b || b.type === 'base' || b.level >= 2) return false;
   const cost = UPGRADES[b.type];
-  if (!cost) return false;
-  if (!canAfford(cost)) return false;
+  if (!cost || !canAfford(cost)) return false;
   payCost(cost);
   b.level = 2;
   if (b.type === 'battery') b.maxCharge = BATTERY_MAX_CHARGE * 2;
   addUpgradeMarker(b);
   playUpgradeSound();
+  markPowerDirty();
   showInspector(b);
   updateUI();
   return true;
@@ -1327,24 +1356,18 @@ function batteryExplode(battery) {
     else damageBuilding(b, 99999);
   }
   for (const e of enemies) {
-    if (Math.abs(e.pos.x - bx) <= 1.6 && Math.abs(e.pos.z - bz) <= 1.6) {
-      e.hp -= 500; e.hitFlash = 0.15;
-    }
+    if (Math.abs(e.pos.x - bx) <= 1.6 && Math.abs(e.pos.z - bz) <= 1.6) { e.hp -= 500; e.hitFlash = 0.15; }
   }
   for (const bs of bosses) {
-    if (Math.abs(bs.pos.x - bx) <= 1.6 && Math.abs(bs.pos.z - bz) <= 1.6) {
-      bs.hp -= 300; bs.hitFlash = 0.2;
-    }
+    if (Math.abs(bs.pos.x - bx) <= 1.6 && Math.abs(bs.pos.z - bz) <= 1.6) { bs.hp -= 300; bs.hitFlash = 0.2; }
   }
   spawnExplosion(bx, 0.5, bz);
   playExplosionSound(1.3);
 }
 
 function spawnExplosion(x, y, z) {
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 16, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 1, depthWrite: false })
-  );
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 1, depthWrite: false }));
   mesh.position.set(x, y, z);
   scene.add(mesh);
   explosions.push({ mesh, t: 0, duration: 0.55 });
@@ -1358,8 +1381,7 @@ const particlePool = [];
 const MAX_PARTICLES = 400;
 
 function spawnDeathParticles(x, y, z, color = 0xff6a7e, count = 10) {
-  const available = MAX_PARTICLES - particles.length;
-  count = Math.min(count, available);
+  count = Math.min(count, MAX_PARTICLES - particles.length);
   for (let i = 0; i < count; i++) {
     let p = particlePool.pop();
     if (!p) {
@@ -1436,17 +1458,11 @@ function tryAcceptItem(target, item) {
       if (state[item.kind] !== undefined) state[item.kind] += 1;
       scene.remove(item.mesh); return true;
     case 'furnace':
-      if (item.kind === 'ironOre' && target.ironBuffer < FURNACE_MAX_BUFFER) {
-        target.ironBuffer++; scene.remove(item.mesh); return true;
-      }
-      if (item.kind === 'copperOre' && target.copperBuffer < FURNACE_MAX_BUFFER) {
-        target.copperBuffer++; scene.remove(item.mesh); return true;
-      }
+      if (item.kind === 'ironOre' && target.ironBuffer < FURNACE_MAX_BUFFER) { target.ironBuffer++; scene.remove(item.mesh); return true; }
+      if (item.kind === 'copperOre' && target.copperBuffer < FURNACE_MAX_BUFFER) { target.copperBuffer++; scene.remove(item.mesh); return true; }
       return false;
     case 'powerplant':
-      if (item.kind === 'coal' && target.fuel < target.maxFuel) {
-        target.fuel++; scene.remove(item.mesh); return true;
-      }
+      if (item.kind === 'coal' && target.fuel < target.maxFuel) { target.fuel++; scene.remove(item.mesh); return true; }
       return false;
     case 'liquefier':
       if (!target.liquidStorage[item.kind]) target.liquidStorage[item.kind] = 0;
@@ -1473,49 +1489,31 @@ function updateConveyor(b, dt) {
     if (tryAcceptItem(target, item)) b.item = null;
   }
 }
-
 function updateMine(b, dt) {
   if (b.mesh.userData.drill) b.mesh.userData.drill.rotation.y += dt * 7;
-  const powerMul = b.powered ? 4 : 1;
-  const levelMul = b.level === 2 ? 2 : 1;
-  const period = MINE_PERIOD / (powerMul * levelMul);
+  const period = MINE_PERIOD / (b.powered ? 4 : 1) / (b.level === 2 ? 2 : 1);
   b.timer += dt;
   if (b.timer < period) return;
   b.timer -= period;
   const oreType = tileType[idx(b.gx, b.gz)];
-  const kind = oreType === ORE_IRON ? 'ironOre' :
-               oreType === ORE_COPPER ? 'copperOre' :
-               oreType === ORE_COAL ? 'coal' : 'stone';
+  const kind = oreType === ORE_IRON ? 'ironOre' : oreType === ORE_COPPER ? 'copperOre' : oreType === ORE_COAL ? 'coal' : 'stone';
   for (const cell of getBuildingOutputCells(b)) {
     const n = buildingAt(cell.gx, cell.gz);
     if (!n) continue;
-    if (n.type === 'conveyor' && !n.item) {
-      n.item = spawnItemMesh(kind, cell.gx, cell.gz, -0.5);
-      return;
-    }
+    if (n.type === 'conveyor' && !n.item) { n.item = spawnItemMesh(kind, cell.gx, cell.gz, -0.5); return; }
   }
 }
-
 function tryOutputItem(b, kind) {
   for (const cell of getBuildingOutputCells(b)) {
     const n = buildingAt(cell.gx, cell.gz);
     if (!n) continue;
-    if (n.type === 'conveyor' && !n.item) {
-      n.item = spawnItemMesh(kind, cell.gx, cell.gz, -0.5);
-      return true;
-    }
-    if (n.type === 'base') {
-      if (state[kind] !== undefined) state[kind] += 1;
-      return true;
-    }
+    if (n.type === 'conveyor' && !n.item) { n.item = spawnItemMesh(kind, cell.gx, cell.gz, -0.5); return true; }
+    if (n.type === 'base') { if (state[kind] !== undefined) state[kind] += 1; return true; }
   }
   return false;
 }
-
 function updateFurnace(b, dt) {
-  const powerMul = b.powered ? 4 : 1;
-  const levelMul = b.level === 2 ? 2 : 1;
-  const period = FURNACE_PERIOD / (powerMul * levelMul);
+  const period = FURNACE_PERIOD / (b.powered ? 4 : 1) / (b.level === 2 ? 2 : 1);
   if (b.mesh.userData.fire) {
     const s = 0.9 + Math.sin(performance.now() * 0.008) * 0.15 + (b.processing ? 0.3 : 0);
     b.mesh.userData.fire.scale.setScalar(s);
@@ -1541,7 +1539,6 @@ function updateFurnace(b, dt) {
     }
   }
 }
-
 function updatePowerPlant(b, dt) {
   if (b.disabled || b.fuel <= 0) {
     b.active = false;
@@ -1553,12 +1550,11 @@ function updatePowerPlant(b, dt) {
   b.active = true;
   b.fuelBurnTimer += dt;
   const burnInterval = b.level === 2 ? 20 : 10;
-  if (b.fuelBurnTimer >= burnInterval) { b.fuelBurnTimer -= burnInterval; b.fuel--; }
+  if (b.fuelBurnTimer >= burnInterval) { b.fuelBurnTimer -= burnInterval; b.fuel--; markPowerDirty(); }
   if (b.mesh.userData.core) b.mesh.userData.core.material = MAT.green;
   if (b.mesh.userData.glow) { b.mesh.userData.glow.material = MAT.green; b.mesh.userData.glow.rotation.z += dt * 2; }
   if (b.mesh.userData.fuelInd) b.mesh.userData.fuelInd.visible = true;
 }
-
 function updateBatteryVisual(b, dt, now) {
   const ratio = b.charge / b.maxCharge;
   const inds = b.mesh.userData.chargeIndicators;
@@ -1586,6 +1582,7 @@ function updateLiquefierVisual(b, now) {
 }
 
 function updatePipeNetwork() {
+  if (buildingsByType.pipe.length === 0) return;
   const visited = new Set();
   for (const b of buildingsByType.pipe) {
     const key = idx(b.gx, b.gz);
@@ -1629,18 +1626,15 @@ function pushLiquid(liq, target) {
     if (!storage[kind] || storage[kind] <= 0) continue;
     if (target.type === 'furnace') {
       if (kind === 'ironOre' && target.ironBuffer < FURNACE_MAX_BUFFER) {
-        const space = FURNACE_MAX_BUFFER - target.ironBuffer;
-        const t = Math.min(space, storage[kind]);
+        const t = Math.min(FURNACE_MAX_BUFFER - target.ironBuffer, storage[kind]);
         target.ironBuffer += t; storage[kind] -= t;
       } else if (kind === 'copperOre' && target.copperBuffer < FURNACE_MAX_BUFFER) {
-        const space = FURNACE_MAX_BUFFER - target.copperBuffer;
-        const t = Math.min(space, storage[kind]);
+        const t = Math.min(FURNACE_MAX_BUFFER - target.copperBuffer, storage[kind]);
         target.copperBuffer += t; storage[kind] -= t;
       }
     } else if (target.type === 'powerplant') {
       if (kind === 'coal' && target.fuel < target.maxFuel) {
-        const space = target.maxFuel - target.fuel;
-        const t = Math.min(space, storage[kind]);
+        const t = Math.min(target.maxFuel - target.fuel, storage[kind]);
         target.fuel += t; storage[kind] -= t;
       }
     } else if (target.type === 'base') {
@@ -1656,19 +1650,20 @@ function pushLiquid(liq, target) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   15. 电力网络（修复：索引 BFS + 优化）
+   15. 电力网络（重写：脏标记 + 节流）
    ═══════════════════════════════════════════════════════════ */
-let powerSkipFrame = 0;
+let powerDirty = true;
+let powerLastCalc = 0;
 
-function updatePowerNetwork(dt) {
-  // 每 2 帧执行一次完整计算
-  powerSkipFrame = (powerSkipFrame + 1) % 2;
-  if (powerSkipFrame !== 0) {
-    // 仅更新电池充放电的连续效果，但简化处理
-    return;
-  }
-  const ddt = dt * 2;
+function markPowerDirty() { powerDirty = true; }
 
+function updatePowerNetwork(now) {
+  // 只有脏了 或 超过节流周期才重算
+  if (!powerDirty && (now - powerLastCalc) < POWER_RECALC_INTERVAL_MS) return;
+  powerDirty = false;
+  powerLastCalc = now;
+
+  // 重置所有建筑的供电状态
   for (const b of buildings) b.powered = false;
 
   // ─── Pass 1: 从发电厂 BFS ───
@@ -1682,15 +1677,14 @@ function updatePowerNetwork(dt) {
       }
     }
   }
-  // 索引 BFS
   let qi = 0;
   while (qi < plantQueue.length) {
     const key = plantQueue[qi++];
-    const gx = key % GRID, gz = Math.floor(key / GRID);
-    for (const d of DIRS) {
-      const nx = gx + d.x, nz = gz + d.z;
-      if (!inBounds(nx, nz)) continue;
-      const nk = idx(nx, nz);
+    const gx = key % GRID, gz = (key / GRID) | 0;
+    for (let d = 0; d < 4; d++) {
+      const nx = gx + DIRS[d].x, nz = gz + DIRS[d].z;
+      if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
+      const nk = nz * GRID + nx;
       if (plantVisited.has(nk)) continue;
       const n = buildingAt(nx, nz);
       if (n && n.type === 'cable' && !n.disabled) {
@@ -1700,28 +1694,28 @@ function updatePowerNetwork(dt) {
     }
   }
 
-  // 电网生成器：检查是否在厂网内
+  // 电网生成器：检查是否在发电厂网络内
   const gridGenPowered = [];
   for (const b of buildingsByType.gridgen) {
     if (b.disabled) continue;
     let inNet = false;
-    for (const d of DIRS) {
-      const nx = b.gx + d.x, nz = b.gz + d.z;
-      if (!inBounds(nx, nz)) continue;
-      if (plantVisited.has(idx(nx, nz))) { inNet = true; break; }
+    for (let d = 0; d < 4; d++) {
+      const nx = b.gx + DIRS[d].x, nz = b.gz + DIRS[d].z;
+      if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
+      if (plantVisited.has(nz * GRID + nx)) { inNet = true; break; }
       const n = buildingAt(nx, nz);
       if (n && n.type === 'powerplant' && n.active && !n.disabled) { inNet = true; break; }
     }
     if (inNet) gridGenPowered.push(b);
   }
 
-  // 电池充电
+  // 电池：判断充电状态（速率在别处处理）
   for (const b of buildingsByType.battery) {
     let charging = false;
-    for (const d of DIRS) {
-      const nx = b.gx + d.x, nz = b.gz + d.z;
-      if (!inBounds(nx, nz)) continue;
-      if (plantVisited.has(idx(nx, nz))) { charging = true; break; }
+    for (let d = 0; d < 4; d++) {
+      const nx = b.gx + DIRS[d].x, nz = b.gz + DIRS[d].z;
+      if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
+      if (plantVisited.has(nz * GRID + nx)) { charging = true; break; }
       const n = buildingAt(nx, nz);
       if (n && n.type === 'powerplant' && n.active && !n.disabled) { charging = true; break; }
     }
@@ -1732,12 +1726,9 @@ function updatePowerNetwork(dt) {
       }
     }
     b.isCharging = charging;
-    const chargeMul = b.level === 2 ? 1.5 : 1;
-    if (charging) b.charge = Math.min(b.maxCharge, b.charge + BATTERY_CHARGE_RATE * chargeMul * ddt);
-    else if (b.charge > 0) b.charge = Math.max(0, b.charge - BATTERY_DRAIN_RATE * ddt);
   }
 
-  // ─── Pass 2: 从所有源 BFS ───
+  // ─── Pass 2: 从所有电源 BFS ───
   const sourceVisited = new Set();
   const sourceQueue = [];
   for (const b of buildingsByType.powerplant) {
@@ -1759,11 +1750,11 @@ function updatePowerNetwork(dt) {
   qi = 0;
   while (qi < sourceQueue.length) {
     const key = sourceQueue[qi++];
-    const gx = key % GRID, gz = Math.floor(key / GRID);
-    for (const d of DIRS) {
-      const nx = gx + d.x, nz = gz + d.z;
-      if (!inBounds(nx, nz)) continue;
-      const nk = idx(nx, nz);
+    const gx = key % GRID, gz = (key / GRID) | 0;
+    for (let d = 0; d < 4; d++) {
+      const nx = gx + DIRS[d].x, nz = gz + DIRS[d].z;
+      if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
+      const nk = nz * GRID + nx;
       if (sourceVisited.has(nk)) continue;
       const n = buildingAt(nx, nz);
       if (n && n.type === 'cable' && !n.disabled) {
@@ -1775,10 +1766,10 @@ function updatePowerNetwork(dt) {
 
   // 应用电力
   for (const key of sourceVisited) {
-    const gx = key % GRID, gz = Math.floor(key / GRID);
-    for (const d of DIRS) {
-      const nx = gx + d.x, nz = gz + d.z;
-      if (!inBounds(nx, nz)) continue;
+    const gx = key % GRID, gz = (key / GRID) | 0;
+    for (let d = 0; d < 4; d++) {
+      const nx = gx + DIRS[d].x, nz = gz + DIRS[d].z;
+      if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
       const n = buildingAt(nx, nz);
       if (n) n.powered = true;
     }
@@ -1791,7 +1782,7 @@ function updatePowerNetwork(dt) {
     for (let dx = -r; dx <= r; dx++) {
       for (let dz = -r; dz <= r; dz++) {
         const gx = gg.gx + dx, gz = gg.gz + dz;
-        if (!inBounds(gx, gz)) continue;
+        if (gx < 0 || gz < 0 || gx >= GRID || gz >= GRID) continue;
         const n = buildingAt(gx, gz);
         if (n && !n.disabled) n.powered = true;
       }
@@ -1799,18 +1790,25 @@ function updatePowerNetwork(dt) {
   }
 }
 
+// 电池充放电（每帧，与网络计算解耦）
+function updateBatteries(dt) {
+  for (const b of buildingsByType.battery) {
+    const chargeMul = b.level === 2 ? 1.5 : 1;
+    if (b.isCharging) b.charge = Math.min(b.maxCharge, b.charge + BATTERY_CHARGE_RATE * chargeMul * dt);
+    else if (b.charge > 0) b.charge = Math.max(0, b.charge - BATTERY_DRAIN_RATE * dt);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    16. 目标选择
    ═══════════════════════════════════════════════════════════ */
 function acquireTarget(x, z, range, airFilter) {
-  // airFilter: false=只选地面, true=只选空中, null=都选
   if (priorityTarget && priorityTarget.hp > 0) {
     const valid = (airFilter === null) ||
                   (airFilter === true && priorityTarget.isFlying) ||
                   (airFilter === false && !priorityTarget.isFlying && !priorityTarget.isBoss);
     if (valid) {
-      const dx = priorityTarget.pos.x - x;
-      const dz = priorityTarget.pos.z - z;
+      const dx = priorityTarget.pos.x - x, dz = priorityTarget.pos.z - z;
       if (dx * dx + dz * dz <= range * range) return priorityTarget;
     }
   }
@@ -1835,73 +1833,58 @@ function acquireTarget(x, z, range, airFilter) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   17. 炮塔 / 高能炮 / 电弧炮 / 防空炮
+   17. 炮塔
    ═══════════════════════════════════════════════════════════ */
 function updateTurret(b, dt) {
-  const eff = b.powered ? 4 : 1;
-  const lvlMul = b.level === 2 ? 1.4 : 1;
+  const eff = b.powered ? 4 : 1, lvlMul = b.level === 2 ? 1.4 : 1;
   b.cooldown -= dt;
   const bx = tileCenterX(b.gx), bz = tileCenterZ(b.gz);
   const best = acquireTarget(bx, bz, TURRET_RANGE, false);
   const head = b.mesh.userData.head;
   if (best && head) {
-    const targetAngle = Math.atan2(-(best.pos.z - bz), best.pos.x - bx);
-    let diff = targetAngle - head.rotation.y;
+    const ta = Math.atan2(-(best.pos.z - bz), best.pos.x - bx);
+    let diff = ta - head.rotation.y;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     head.rotation.y += diff * Math.min(1, dt * 12);
     if (b.cooldown <= 0) {
       b.cooldown = 1 / (TURRET_RATE * eff * lvlMul);
-      const mx = bx + Math.cos(head.rotation.y) * 0.65;
-      const mz = bz - Math.sin(head.rotation.y) * 0.65;
-      spawnBullet(mx, 0.5, mz, best, TURRET_DMG, 1, false);
+      spawnBullet(bx + Math.cos(head.rotation.y) * 0.65, 0.5, bz - Math.sin(head.rotation.y) * 0.65, best, TURRET_DMG, 1, false);
       playLaserSound();
     }
   }
 }
-
 function updateHighCannon(b, dt) {
-  const eff = b.powered ? HIGH_POWER_MUL : 1;
-  const lvlMul = b.level === 2 ? 1.4 : 1;
+  const eff = b.powered ? HIGH_POWER_MUL : 1, lvlMul = b.level === 2 ? 1.4 : 1;
   const damage = TURRET_DMG * HIGH_DMG_MUL * eff * lvlMul;
   const rate = TURRET_RATE * HIGH_RATE_MUL * eff * lvlMul;
   b.cooldown -= dt;
   const bx = tileCenterX(b.gx), bz = tileCenterZ(b.gz);
   const best = acquireTarget(bx, bz, TURRET_RANGE, false);
   const head = b.mesh.userData.head;
-  if (b.mesh.userData.core) {
-    const s = 1 + Math.sin(performance.now() * 0.012) * 0.15 * (b.powered ? 1.6 : 1);
-    b.mesh.userData.core.scale.setScalar(s);
-  }
+  if (b.mesh.userData.core) b.mesh.userData.core.scale.setScalar(1 + Math.sin(performance.now() * 0.012) * 0.15 * (b.powered ? 1.6 : 1));
   if (best && head) {
-    const targetAngle = Math.atan2(-(best.pos.z - bz), best.pos.x - bx);
-    let diff = targetAngle - head.rotation.y;
+    const ta = Math.atan2(-(best.pos.z - bz), best.pos.x - bx);
+    let diff = ta - head.rotation.y;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     head.rotation.y += diff * Math.min(1, dt * 12);
     if (b.cooldown <= 0) {
       b.cooldown = 1 / rate;
-      const mx = bx + Math.cos(head.rotation.y) * 0.8;
-      const mz = bz - Math.sin(head.rotation.y) * 0.8;
-      spawnBullet(mx, 0.55, mz, best, damage, 1.4, false);
+      spawnBullet(bx + Math.cos(head.rotation.y) * 0.8, 0.55, bz - Math.sin(head.rotation.y) * 0.8, best, damage, 1.4, false);
       playLaserSound();
     }
   }
 }
-
 function updateArcCannon(b, dt) {
-  if (!b.powered) {
-    if (b.mesh.userData.core) b.mesh.userData.core.material = MAT.dark;
-    return;
-  }
+  if (!b.powered) { if (b.mesh.userData.core) b.mesh.userData.core.material = MAT.dark; return; }
   if (b.mesh.userData.core) b.mesh.userData.core.material = MAT.purple;
   if (b.mesh.userData.emitters) b.mesh.userData.emitters.rotation.y += dt * 1.5;
   b.cooldown -= dt;
   if (b.cooldown > 0) return;
   b.cooldown = 1 / ARC_RATE;
   const bx = tileCenterX(b.gx), bz = tileCenterZ(b.gz);
-  const lvlMul = b.level === 2 ? 1.5 : 1;
-  const dmg = ARC_DMG * lvlMul;
+  const dmg = ARC_DMG * (b.level === 2 ? 1.5 : 1);
   const inRange = [];
   for (const e of enemies) {
     if (e.hp <= 0) continue;
@@ -1918,24 +1901,17 @@ function updateArcCannon(b, dt) {
     inRange.splice(inRange.indexOf(priorityTarget), 1);
     inRange.unshift(priorityTarget);
   } else {
-    inRange.sort((a, b2) => {
-      const da = (a.pos.x-bx)**2 + (a.pos.z-bz)**2;
-      const db = (b2.pos.x-bx)**2 + (b2.pos.z-bz)**2;
-      return da - db;
-    });
+    inRange.sort((a, b2) => ((a.pos.x-bx)**2 + (a.pos.z-bz)**2) - ((b2.pos.x-bx)**2 + (b2.pos.z-bz)**2));
   }
-  const targets = inRange.slice(0, ARC_MAX_TARGETS);
-  for (const t of targets) {
+  for (const t of inRange.slice(0, ARC_MAX_TARGETS)) {
     t.hp -= dmg; t.hitFlash = 0.12;
     const tY = t.isFlying ? t.flyHeight : 0.4;
     spawnArcBeam(new THREE.Vector3(bx, 0.75, bz), new THREE.Vector3(t.pos.x, tY, t.pos.z));
   }
   playLaserSound();
 }
-
 function updateAntiAir(b, dt) {
-  const eff = b.powered ? 2 : 1;
-  const lvlMul = b.level === 2 ? 1.5 : 1;
+  const eff = b.powered ? 2 : 1, lvlMul = b.level === 2 ? 1.5 : 1;
   const dmg = ANTIAIR_DMG * lvlMul;
   const rate = ANTIAIR_RATE * eff * lvlMul;
   b.cooldown -= dt;
@@ -1944,16 +1920,14 @@ function updateAntiAir(b, dt) {
   const head = b.mesh.userData.head;
   if (b.mesh.userData.radar) b.mesh.userData.radar.rotation.y += dt * 3;
   if (best && head) {
-    const targetAngle = Math.atan2(-(best.pos.z - bz), best.pos.x - bx);
-    let diff = targetAngle - head.rotation.y;
+    const ta = Math.atan2(-(best.pos.z - bz), best.pos.x - bx);
+    let diff = ta - head.rotation.y;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     head.rotation.y += diff * Math.min(1, dt * 14);
     if (b.cooldown <= 0) {
       b.cooldown = 1 / rate;
-      const mx = bx + Math.cos(head.rotation.y) * 0.6;
-      const mz = bz - Math.sin(head.rotation.y) * 0.6;
-      spawnBullet(mx, 1.0, mz, best, dmg, 0.9, true);
+      spawnBullet(bx + Math.cos(head.rotation.y) * 0.6, 1.0, bz - Math.sin(head.rotation.y) * 0.6, best, dmg, 0.9, true);
       playLaserSound();
     }
   }
@@ -1988,7 +1962,6 @@ function spawnBullet(x, y, z, target, damage, scale = 1, isAA = false) {
   scene.add(mesh);
   bullets.push({ mesh, target, life: 2.5, damage, isAA });
 }
-
 function updateBullets(dt) {
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
@@ -1998,8 +1971,7 @@ function updateBullets(dt) {
     const dx = b.target.pos.x - b.mesh.position.x;
     const dy = targetY - b.mesh.position.y;
     const dz = b.target.pos.z - b.mesh.position.z;
-    const distSq = dx*dx + dy*dy + dz*dz;
-    const dist = Math.sqrt(distSq);
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
     if (dist < 0.3 || b.life <= 0) {
       if (dist < 0.7) { b.target.hp -= b.damage; b.target.hitFlash = 0.1; }
       scene.remove(b.mesh); bullets.splice(i, 1);
@@ -2015,7 +1987,7 @@ function updateBullets(dt) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   19. 普通敌人 + 飞行敌人
+   19. 敌人
    ═══════════════════════════════════════════════════════════ */
 function createEnemyMesh() {
   const g = new THREE.Group();
@@ -2027,36 +1999,43 @@ function createEnemyMesh() {
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.36; g.add(ring); g.userData.ring = ring;
   return g;
 }
-
 function createFlyingEnemyMesh() {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), MAT.flyingBody);
   body.castShadow = true; g.add(body); g.userData.body = body;
   const core = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), MAT.flyingCore);
   g.add(core); g.userData.core = core;
-  // 双翼
   const wingGeo = new THREE.BoxGeometry(0.7, 0.04, 0.16);
   const wingL = new THREE.Mesh(wingGeo, MAT.flyingBody);
   wingL.position.x = -0.4; g.add(wingL); g.userData.wingL = wingL;
   const wingR = new THREE.Mesh(wingGeo, MAT.flyingBody);
   wingR.position.x = 0.4; g.add(wingR); g.userData.wingR = wingR;
-  // 光环
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.02, 4, 12), MAT.flyingCore);
   ring.rotation.x = Math.PI / 2; g.add(ring); g.userData.ring = ring;
   return g;
 }
 
-function spawnEnemy() {
+// 根据侧边获取生成位置
+function getSpawnPosBySide(side) {
+  if (side === 0) return { gx: Math.floor(Math.random() * GRID), gz: 0 };            // 北
+  if (side === 1) return { gx: Math.floor(Math.random() * GRID), gz: GRID - 1 };     // 南
+  if (side === 2) return { gx: 0, gz: Math.floor(Math.random() * GRID) };            // 西
+  return { gx: GRID - 1, gz: Math.floor(Math.random() * GRID) };                      // 东
+}
+function getSpawnPosBySideFly(side) {
+  if (side === 0) return { gx: Math.floor(Math.random() * GRID), gz: -1 };
+  if (side === 1) return { gx: Math.floor(Math.random() * GRID), gz: GRID };
+  if (side === 2) return { gx: -1, gz: Math.floor(Math.random() * GRID) };
+  return { gx: GRID, gz: Math.floor(Math.random() * GRID) };
+}
+
+function spawnEnemy(forcedSide) {
   const w = state.wave;
   const hp = 26 + w * 9;
   const speed = 1.15 + Math.min(w * 0.045, 0.8);
   const damage = 6 + w * 0.8;
-  const side = Math.floor(Math.random() * 4);
-  let gx, gz;
-  if (side === 0) { gx = Math.floor(Math.random() * GRID); gz = 0; }
-  else if (side === 1) { gx = Math.floor(Math.random() * GRID); gz = GRID - 1; }
-  else if (side === 2) { gx = 0; gz = Math.floor(Math.random() * GRID); }
-  else { gx = GRID - 1; gz = Math.floor(Math.random() * GRID); }
+  const side = (forcedSide !== undefined && forcedSide !== null) ? forcedSide : Math.floor(Math.random() * 4);
+  const { gx, gz } = getSpawnPosBySide(side);
   const mesh = createEnemyMesh();
   const pos = new THREE.Vector3(tileCenterX(gx), 0, tileCenterZ(gz));
   mesh.position.copy(pos);
@@ -2064,22 +2043,18 @@ function spawnEnemy() {
   enemies.push({
     pos, mesh, hp, maxHp: hp, speed, damage,
     attackTimer: 0, attackInterval: 0.85, hitFlash: 0,
-    isFlying: false,
+    isFlying: false, side,
     target: new THREE.Vector3(baseBuilding.gx - HALF + 1, 0, baseBuilding.gz - HALF + 1),
   });
 }
 
-function spawnFlyingEnemy() {
+function spawnFlyingEnemy(forcedSide) {
   const w = state.wave;
   const hp = 18 + w * 6;
   const speed = 1.4 + Math.min(w * 0.05, 1.0);
   const damage = 4 + w * 0.5;
-  const side = Math.floor(Math.random() * 4);
-  let gx, gz;
-  if (side === 0) { gx = Math.floor(Math.random() * GRID); gz = -1; }
-  else if (side === 1) { gx = Math.floor(Math.random() * GRID); gz = GRID; }
-  else if (side === 2) { gx = -1; gz = Math.floor(Math.random() * GRID); }
-  else { gx = GRID; gz = Math.floor(Math.random() * GRID); }
+  const side = (forcedSide !== undefined && forcedSide !== null) ? forcedSide : Math.floor(Math.random() * 4);
+  const { gx, gz } = getSpawnPosBySideFly(side);
   const mesh = createFlyingEnemyMesh();
   const pos = new THREE.Vector3(tileCenterX(gx), FLYING_HEIGHT, tileCenterZ(gz));
   mesh.position.copy(pos);
@@ -2088,7 +2063,7 @@ function spawnFlyingEnemy() {
     pos, mesh, hp, maxHp: hp, speed, damage,
     attackTimer: 0, attackInterval: 0.7, hitFlash: 0,
     isFlying: true, flyHeight: FLYING_HEIGHT,
-    bobPhase: Math.random() * Math.PI * 2,
+    bobPhase: Math.random() * Math.PI * 2, side,
     target: new THREE.Vector3(baseBuilding.gx - HALF + 1, 0, baseBuilding.gz - HALF + 1),
   });
 }
@@ -2104,6 +2079,8 @@ function enemyDistToBuilding(e, b) {
 const ENEMY_ATTACK_RANGE = 1.35;
 
 function updateEnemies(dt, now) {
+  const baseX = baseBuilding.gx - HALF + 1;
+  const baseZ = baseBuilding.gz - HALF + 1;
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (e.hp <= 0) {
@@ -2115,11 +2092,16 @@ function updateEnemies(dt, now) {
       if (priorityTarget === e) priorityTarget = null;
       continue;
     }
-    if (e.hitFlash > 0) { e.hitFlash -= dt; e.mesh.userData.core.material = e.isFlying ? MAT.bullet : MAT.bullet; }
+    // 追踪：离基地最近距离
+    if (e.side !== undefined) {
+      const d = Math.hypot(e.pos.x - baseX, e.pos.z - baseZ);
+      if (d < state.currentWaveSideDist[e.side]) state.currentWaveSideDist[e.side] = d;
+    }
+
+    if (e.hitFlash > 0) { e.hitFlash -= dt; e.mesh.userData.core.material = MAT.bullet; }
     else e.mesh.userData.core.material = e.isFlying ? MAT.flyingCore : MAT.enemyCore;
 
     if (e.isFlying) {
-      // 飞行敌人：直接飞向基地
       const dx = e.target.x - e.pos.x;
       const dz = e.target.z - e.pos.z;
       const dist = Math.hypot(dx, dz);
@@ -2134,17 +2116,13 @@ function updateEnemies(dt, now) {
         e.mesh.userData.wingR.rotation.z = -flap;
       } else {
         e.attackTimer -= dt;
-        if (e.attackTimer <= 0) {
-          e.attackTimer = e.attackInterval;
-          damageBuilding(baseBuilding, e.damage);
-        }
+        if (e.attackTimer <= 0) { e.attackTimer = e.attackInterval; damageBuilding(baseBuilding, e.damage); }
       }
       e.mesh.position.x = e.pos.x;
       e.mesh.position.z = e.pos.z;
       e.mesh.position.y = e.flyHeight + Math.sin(now * 0.005 + e.bobPhase) * 0.15;
       e.mesh.rotation.y = Math.atan2(dx, dz);
     } else {
-      // 地面敌人
       e.mesh.userData.body.rotation.y += dt * 1.6;
       e.mesh.userData.ring.rotation.z += dt * 2.2;
       const bob = Math.sin(now * 0.004 + i) * 0.045;
@@ -2205,9 +2183,7 @@ function updateLimbMesh(mesh, start, end, thickness) {
 }
 
 function createBossLegMesh(variant, hipAngle) {
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: variant.bodyColor, roughness: 0.5, metalness: 0.55, flatShading: true,
-  });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: variant.bodyColor, roughness: 0.5, metalness: 0.55, flatShading: true });
   const thigh = new THREE.Mesh(limbGeo, bodyMat); thigh.castShadow = true;
   const shin = new THREE.Mesh(limbGeo, bodyMat); shin.castShadow = true;
   const foot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), bodyMat); foot.castShadow = true;
@@ -2223,14 +2199,10 @@ function createBossLegMesh(variant, hipAngle) {
 function createBossMesh(variant) {
   const V = BOSS_VARIANTS[variant];
   const group = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: V.bodyColor, roughness: 0.55, metalness: 0.5, flatShading: true,
-  });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: V.bodyColor, roughness: 0.55, metalness: 0.5, flatShading: true });
   const body = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3, 1), bodyMat);
   body.position.y = 1.75; body.castShadow = true; group.add(body);
-  const coreMat = new THREE.MeshStandardMaterial({
-    color: V.coreColor, emissive: V.coreColor, emissiveIntensity: 2.5, roughness: 0.25,
-  });
+  const coreMat = new THREE.MeshStandardMaterial({ color: V.coreColor, emissive: V.coreColor, emissiveIntensity: 2.5, roughness: 0.25 });
   const core = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 12), coreMat);
   core.position.y = 1.75; group.add(core);
   group.userData.core = core;
@@ -2239,9 +2211,7 @@ function createBossMesh(variant) {
     spike.position.set(-0.4 + i * 0.4, 2.6, 0);
     spike.rotation.z = -0.3; spike.castShadow = true; group.add(spike);
   }
-  const mouthMat = new THREE.MeshStandardMaterial({
-    color: 0xff6622, emissive: 0xff2200, emissiveIntensity: 2.5, roughness: 0.3,
-  });
+  const mouthMat = new THREE.MeshStandardMaterial({ color: 0xff6622, emissive: 0xff2200, emissiveIntensity: 2.5, roughness: 0.3 });
   const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), mouthMat);
   mouth.position.set(1.15, 1.55, 0); group.add(mouth);
   group.userData.mouth = mouth;
@@ -2253,11 +2223,11 @@ function createBossMesh(variant) {
   return group;
 }
 
-function spawnBoss(variant) {
+function spawnBoss(variant, forcedSide) {
   const V = BOSS_VARIANTS[variant];
   const w = state.wave;
   const hp = Math.floor((500 + w * 120) * V.hpMul);
-  const side = Math.floor(Math.random() * 4);
+  const side = (forcedSide !== undefined && forcedSide !== null) ? forcedSide : Math.floor(Math.random() * 4);
   let gx, gz;
   if (side === 0) { gx = Math.floor(Math.random() * GRID); gz = 1; }
   else if (side === 1) { gx = Math.floor(Math.random() * GRID); gz = GRID - 2; }
@@ -2272,7 +2242,8 @@ function spawnBoss(variant) {
   const boss = {
     isBoss: true, variant, name: V.name,
     pos, mesh, hp, maxHp: hp,
-    bodyRadius: 1.3, speed: V.speed,
+    bodyRadius: 1.3,
+    speed: bossSpeed(V),  // ← 腿越多越快
     legs: [], facing: 0,
     attackTimer: 0, breathTimer: 3.5, breathActive: 0, breathCone: null,
     hitFlash: 0, deathT: 0, isDying: false,
@@ -2305,7 +2276,6 @@ function onLegLand(boss, leg) {
     playExplosionSound(0.8);
   }
 }
-
 function onBossDeath(boss) {
   const x = boss.pos.x, z = boss.pos.z;
   const radius = 3;
@@ -2330,22 +2300,17 @@ function onBossDeath(boss) {
   spawnDeathParticles(x, 1.2, z, 0xff5a6e, 30);
   playExplosionSound(2.0);
 }
-
 function spawnShockwave(x, z) {
   const ringGeo = new THREE.RingGeometry(0.3, 0.7, 32);
   ringGeo.rotateX(-Math.PI / 2);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xffaa44, transparent: true, opacity: 1, side: THREE.DoubleSide, depthWrite: false,
-  });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
+  const ring = new THREE.Mesh(ringGeo,
+    new THREE.MeshBasicMaterial({ color: 0xffaa44, transparent: true, opacity: 1, side: THREE.DoubleSide, depthWrite: false }));
   ring.position.set(x, 0.25, z);
   scene.add(ring);
   shockwaves.push({ mesh: ring, t: 0, duration: 0.9 });
 }
-
 function updateBossLegs(boss, dt) {
-  const rot = boss.facing;
-  const bodyR = boss.bodyRadius;
+  const rot = boss.facing, bodyR = boss.bodyRadius;
   for (const leg of boss.legs) {
     const hipAngle = rot + leg.hipAngle;
     const hipX = boss.pos.x + Math.cos(hipAngle) * bodyR * 0.8;
@@ -2376,28 +2341,21 @@ function updateBossLegs(boss, dt) {
     const kneeX = (hipX + leg.currentX) / 2;
     const kneeZ = (hipZ + leg.currentZ) / 2;
     const kneeY = 1.1 + lift * 0.4;
-    _limbStart.set(hipX, 1.4, hipZ);
-    _limbEnd.set(kneeX, kneeY, kneeZ);
+    _limbStart.set(hipX, 1.4, hipZ); _limbEnd.set(kneeX, kneeY, kneeZ);
     updateLimbMesh(leg.thighMesh, _limbStart, _limbEnd, 0.17);
-    _limbStart.set(kneeX, kneeY, kneeZ);
-    _limbEnd.set(leg.currentX, lift, leg.currentZ);
+    _limbStart.set(kneeX, kneeY, kneeZ); _limbEnd.set(leg.currentX, lift, leg.currentZ);
     updateLimbMesh(leg.shinMesh, _limbStart, _limbEnd, 0.13);
     leg.footMesh.position.set(leg.currentX, lift, leg.currentZ);
   }
 }
-
 function updateBossBreath(boss, dt, now) {
   const V = BOSS_VARIANTS[boss.variant];
   if (boss.mesh.userData.mouth) {
     const intensity = boss.breathActive > 0 ? 4 + Math.sin(now * 0.03) * 2 : 2;
     boss.mesh.userData.mouth.material.emissiveIntensity = intensity;
-    const s = boss.breathActive > 0 ? 1.25 : 1;
-    boss.mesh.userData.mouth.scale.setScalar(s);
+    boss.mesh.userData.mouth.scale.setScalar(boss.breathActive > 0 ? 1.25 : 1);
   }
-  if (boss.mesh.userData.core) {
-    const s = 1 + Math.sin(now * 0.008) * 0.1;
-    boss.mesh.userData.core.scale.setScalar(s);
-  }
+  if (boss.mesh.userData.core) boss.mesh.userData.core.scale.setScalar(1 + Math.sin(now * 0.008) * 0.1);
 
   if (boss.breathActive > 0) {
     boss.breathActive -= dt;
@@ -2414,8 +2372,7 @@ function updateBossBreath(boss, dt, now) {
       boss.breathCone = cone;
     }
     const mouthWorld = _limbStart.copy(boss.pos);
-    mouthWorld.x += Math.cos(boss.facing) * 1.2;
-    mouthWorld.y = 1.55;
+    mouthWorld.x += Math.cos(boss.facing) * 1.2; mouthWorld.y = 1.55;
     mouthWorld.z += Math.sin(boss.facing) * 1.2;
     boss.breathCone.position.copy(mouthWorld);
     boss.breathCone.rotation.y = -boss.facing;
@@ -2424,39 +2381,30 @@ function updateBossBreath(boss, dt, now) {
 
     const dirX = Math.cos(boss.facing), dirZ = Math.sin(boss.facing);
     for (const b of buildings) {
-      const bx = b.gx - HALF + b.w / 2;
-      const bz = b.gz - HALF + b.h / 2;
+      const bx = b.gx - HALF + b.w / 2, bz = b.gz - HALF + b.h / 2;
       const dx = bx - boss.pos.x, dz = bz - boss.pos.z;
       const dist = Math.hypot(dx, dz);
       if (dist > 4.5 || dist < 0.01) continue;
-      const dot = (dx * dirX + dz * dirZ) / dist;
-      if (dot < 0.72) continue;
+      if ((dx * dirX + dz * dirZ) / dist < 0.72) continue;
       if (b.type === 'battery') {
-        if (V.breathExplodesBatteries) {
-          batteryExplode(b);
-          b.hp = 0; b.pendingRemove = true;
-        } else damageBuilding(b, 260 * dt);
+        if (V.breathExplodesBatteries) { batteryExplode(b); b.hp = 0; b.pendingRemove = true; }
+        else damageBuilding(b, 260 * dt);
       } else if (b.type === 'base') damageBuilding(b, 110 * dt);
       else damageBuilding(b, 260 * dt);
     }
-  } else {
-    if (boss.breathCone) boss.breathCone.visible = false;
-  }
+  } else if (boss.breathCone) boss.breathCone.visible = false;
 
   boss.breathTimer -= dt;
   if (boss.breathTimer <= 0 && boss.breathActive <= 0) {
-    const dx = boss.target.x - boss.pos.x, dz = boss.target.z - boss.pos.z;
-    const d = Math.hypot(dx, dz);
+    const d = Math.hypot(boss.target.x - boss.pos.x, boss.target.z - boss.pos.z);
     if (d < 7) { boss.breathTimer = 4.5; boss.breathActive = 1.3; }
     else boss.breathTimer = 1.5;
   }
 }
-
 function updateBosses(dt, now) {
   for (let i = bosses.length - 1; i >= 0; i--) {
     const boss = bosses[i];
     const V = BOSS_VARIANTS[boss.variant];
-
     if (boss.isDying) {
       boss.deathT += dt;
       const t = Math.min(1, boss.deathT / 0.9);
@@ -2467,31 +2415,24 @@ function updateBosses(dt, now) {
         onBossDeath(boss);
         boss.mesh.traverse(o => { if (o.isMesh) o.geometry.dispose?.(); });
         scene.remove(boss.mesh);
-        for (const leg of boss.legs) {
-          scene.remove(leg.thighMesh); scene.remove(leg.shinMesh); scene.remove(leg.footMesh);
-        }
+        for (const leg of boss.legs) { scene.remove(leg.thighMesh); scene.remove(leg.shinMesh); scene.remove(leg.footMesh); }
         if (boss.breathCone) scene.remove(boss.breathCone);
         bosses.splice(i, 1);
         if (priorityTarget === boss) priorityTarget = null;
       }
       continue;
     }
-
     if (boss.hp <= 0) { boss.isDying = true; boss.deathT = 0; continue; }
-
     if (boss.hitFlash > 0) {
       boss.hitFlash -= dt;
       if (boss.mesh.userData.core) boss.mesh.userData.core.material.emissiveIntensity = 5;
-    } else {
-      if (boss.mesh.userData.core) boss.mesh.userData.core.material.emissiveIntensity = 2.5;
-    }
+    } else if (boss.mesh.userData.core) boss.mesh.userData.core.material.emissiveIntensity = 2.5;
 
     const dx = boss.target.x - boss.pos.x, dz = boss.target.z - boss.pos.z;
     const dist = Math.hypot(dx, dz);
     if (dist > 0.5) {
       const ndx = dx / dist, ndz = dz / dist;
-      let desiredFacing = Math.atan2(ndz, ndx);
-      let diff = desiredFacing - boss.facing;
+      let diff = Math.atan2(ndz, ndx) - boss.facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       boss.facing += diff * Math.min(1, dt * 1.5);
@@ -2510,16 +2451,14 @@ function updateBosses(dt, now) {
       let inGrid = false;
       for (const b of buildings) {
         if ((b.type === 'cable' || b.type === 'gridgen' || b.type === 'powerplant') && !b.disabled) {
-          const bx = b.gx - HALF + b.w / 2;
-          const bz = b.gz - HALF + b.h / 2;
+          const bx = b.gx - HALF + b.w / 2, bz = b.gz - HALF + b.h / 2;
           if (Math.hypot(bx - boss.pos.x, bz - boss.pos.z) < MECH_HEAL_RANGE) { inGrid = true; break; }
         }
       }
       if (inGrid) boss.hp = Math.min(boss.maxHp, boss.hp + MECH_HEAL_RATE * dt);
       for (const b of buildings) {
         if (b.type === 'cable' || b.type === 'gridgen' || b.type === 'powerplant') {
-          const bx = b.gx - HALF + b.w / 2;
-          const bz = b.gz - HALF + b.h / 2;
+          const bx = b.gx - HALF + b.w / 2, bz = b.gz - HALF + b.h / 2;
           if (Math.hypot(bx - boss.pos.x, bz - boss.pos.z) < MECH_PARALYZE_RANGE) b.disabled = true;
         }
       }
@@ -2528,11 +2467,28 @@ function updateBosses(dt, now) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   21. 波次
+   21. 波次 + 总攻
    ═══════════════════════════════════════════════════════════ */
 function getWaveInterval() {
   const base = Math.max(28, 50 - state.wave * 1.5);
   return state.difficulty === 'easy' ? base * 2 : base;
+}
+
+// 判断是否是总攻波
+function isAssaultWave(wave) {
+  return wave >= ASSAULT_START_WAVE && wave % 2 === 0;
+}
+
+// 从历史中找出最接近基地的侧边
+function getAssaultSide() {
+  if (state.sideHistory.length === 0) return Math.floor(Math.random() * 4);
+  let minD = Infinity, side = 0;
+  for (const hist of state.sideHistory) {
+    for (let s = 0; s < 4; s++) {
+      if (hist[s] < minD) { minD = hist[s]; side = s; }
+    }
+  }
+  return side;
 }
 
 function startWave() {
@@ -2540,14 +2496,26 @@ function startWave() {
   state.inWave = true;
   state.spawnRemaining = 3 + state.wave * 2;
   state.spawnTimer = 0;
+  state.currentWaveSideDist = [Infinity, Infinity, Infinity, Infinity];
 
-  // Boss：根据波次数量递增
+  // 判断总攻
+  if (isAssaultWave(state.wave)) {
+    state.assaultSide = getAssaultSide();
+    state.assaultActive = true;
+    state.spawnRemaining = Math.floor(state.spawnRemaining * 1.5);
+    showAssaultBanner(state.assaultSide);
+  } else {
+    state.assaultSide = null;
+    state.assaultActive = false;
+  }
+
+  // Boss 生成
   if (state.wave > BOSS_SPAWN_WAVE && state.wave % BOSS_SPAWN_INTERVAL === 0) {
     const count = 1 + Math.floor((state.wave - BOSS_SPAWN_WAVE - 1) / BOSS_SPAWN_INTERVAL);
     const variants = ['original', 'mechanical', 'mutated'];
     for (let i = 0; i < count; i++) {
       const variant = variants[Math.floor(Math.random() * variants.length)];
-      spawnBoss(variant);
+      spawnBoss(variant, state.assaultActive ? state.assaultSide : null);
     }
   }
 }
@@ -2559,18 +2527,24 @@ function updateWaves(dt) {
       state.spawnTimer -= dt;
       if (state.spawnTimer <= 0) {
         state.spawnTimer = Math.max(0.28, 0.8 - state.wave * 0.04);
-        // 飞行敌人概率
         const canSpawnFlying = state.wave >= FLYING_SPAWN_WAVE;
         const flyingChance = canSpawnFlying ? Math.min(0.45, 0.18 + state.wave * 0.015) : 0;
-        if (Math.random() < flyingChance) spawnFlyingEnemy();
-        else spawnEnemy();
+        const side = state.assaultActive ? state.assaultSide : undefined;
+        if (Math.random() < flyingChance) spawnFlyingEnemy(side);
+        else spawnEnemy(side);
         state.spawnRemaining--;
       }
     } else if (enemies.length === 0 && bosses.length === 0) {
       state.inWave = false;
-      state.researchPoints += 1;
+      state.assaultActive = false;
+      state.researchPoints += state.assaultActive ? 2 : 1;
+      // 记录本波侧边接近度
+      state.sideHistory.push([...state.currentWaveSideDist]);
+      if (state.sideHistory.length > 2) state.sideHistory.shift();
+      state.currentWaveSideDist = [Infinity, Infinity, Infinity, Infinity];
+
       state.waveTimer = getWaveInterval();
-      showSaveToast(`第 ${state.wave} 波已清空 · +1 研究点`);
+      showSaveToast(`第 ${state.wave} 波已清空 · +${state.assaultActive ? 2 : 1} 研究点`);
       refreshTechPanel();
       updateUI();
     }
@@ -2585,17 +2559,15 @@ function updateWaves(dt) {
    ═══════════════════════════════════════════════════════════ */
 function updateBuildingAppearance(b) {
   if (!b.meshMaterials || b.meshMaterials.length === 0) return;
-  const ratio = b.hp / b.maxHp;
-  const damage = 1 - ratio;
+  const damage = 1 - b.hp / b.maxHp;
   for (const entry of b.meshMaterials) {
     const { mat, orig } = entry;
-    const tint = 1 - damage * 0.5;
-    mat.color.copy(orig.color).multiplyScalar(tint);
+    mat.color.copy(orig.color).multiplyScalar(1 - damage * 0.5);
     if (damage > 0.35) {
-      const redAmount = (damage - 0.35) / 0.65;
+      const ra = (damage - 0.35) / 0.65;
       mat.emissive.copy(orig.emissive);
-      mat.emissive.r += redAmount * 0.5;
-      mat.emissiveIntensity = orig.emissiveIntensity + redAmount * 0.6;
+      mat.emissive.r += ra * 0.5;
+      mat.emissiveIntensity = orig.emissiveIntensity + ra * 0.6;
     } else {
       mat.emissive.copy(orig.emissive);
       mat.emissiveIntensity = orig.emissiveIntensity;
@@ -2619,7 +2591,6 @@ function pickTile(clientX, clientY) {
   if (raycaster.ray.intersectPlane(groundPlane, tmpVec)) return worldToTile(tmpVec.x, tmpVec.z);
   return null;
 }
-
 function pickPriorityTarget(clientX, clientY) {
   const rect = renderer.domElement.getBoundingClientRect();
   ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
@@ -2628,8 +2599,7 @@ function pickPriorityTarget(clientX, clientY) {
   const targetPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
   const hit = new THREE.Vector3();
   if (!raycaster.ray.intersectPlane(targetPlane, hit)) return false;
-
-  let best = null, bestD2 = 2.0 * 2.0;
+  let best = null, bestD2 = 4;
   for (const e of enemies) {
     if (e.hp <= 0) continue;
     const dy = e.isFlying ? e.flyHeight - 0.4 : 0;
@@ -2656,26 +2626,20 @@ const ghostMatOK = new THREE.MeshBasicMaterial({ color: 0x46e0ff, transparent: t
 const ghostMatBad = new THREE.MeshBasicMaterial({ color: 0xff4060, transparent: true, opacity: 0.32, depthWrite: false });
 let hoverTile = null, isDragging = false;
 let holdBuilding = null, holdTime = 0, holdTile = null;
-let inspectedBuilding = null;
 const keys = {};
 
 function selectType(type) {
   if (type && !isBuildingUnlocked(type)) return;
   selectedType = type;
   ghostRot = 0;
-  document.querySelectorAll('.build-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.type === type);
-  });
+  document.querySelectorAll('.build-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
   rebuildGhost();
 }
-
 function rebuildGhost() {
   if (ghostMesh) { scene.remove(ghostMesh); ghostMesh = null; }
   if (!selectedType) return;
   ghostMesh = createBuildingMesh(selectedType);
-  ghostMesh.traverse(o => {
-    if (o.isMesh) { o.material = ghostMatOK; o.castShadow = false; o.receiveShadow = false; }
-  });
+  ghostMesh.traverse(o => { if (o.isMesh) { o.material = ghostMatOK; o.castShadow = false; o.receiveShadow = false; } });
   scene.add(ghostMesh);
 }
 
@@ -2691,36 +2655,25 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   } else {
     if (!selectedType) {
       if (pickPriorityTarget(e.clientX, e.clientY)) return;
-      if (priorityTarget) {
-        priorityTarget = null;
-        showSaveToast('已取消锁定');
-        return;
-      }
+      if (priorityTarget) { priorityTarget = null; showSaveToast('已取消锁定'); return; }
       return;
     }
     isDragging = true;
     tryPlaceAt(t.gx, t.gz);
   }
 });
-
 window.addEventListener('pointerup', (e) => {
   if (e.button !== 0) return;
   if (holdBuilding && holdTime < 0.45) showInspector(holdBuilding);
   holdBuilding = null; holdTile = null; isDragging = false;
 });
-
 window.addEventListener('pointermove', (e) => {
   if (!gameStarted) return;
   hoverTile = pickTile(e.clientX, e.clientY);
   if (holdBuilding) {
-    if (!hoverTile || hoverTile.gx !== holdTile.gx || hoverTile.gz !== holdTile.gz) {
-      holdBuilding = null; holdTile = null;
-    }
-  } else if (isDragging && hoverTile) {
-    tryPlaceAt(hoverTile.gx, hoverTile.gz);
-  }
+    if (!hoverTile || hoverTile.gx !== holdTile.gx || hoverTile.gz !== holdTile.gz) { holdBuilding = null; holdTile = null; }
+  } else if (isDragging && hoverTile) tryPlaceAt(hoverTile.gx, hoverTile.gz);
 });
-
 renderer.domElement.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   if (!gameStarted) return;
@@ -2730,7 +2683,6 @@ renderer.domElement.addEventListener('contextmenu', (e) => {
   if (b) showInspector(b);
   else { selectType(null); hideInspector(); }
 });
-
 renderer.domElement.addEventListener('wheel', (e) => {
   e.preventDefault();
   camZoom = THREE.MathUtils.clamp(camZoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.55, 2.4);
@@ -2753,7 +2705,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '0') selectType(PALETTE[9]);
   else if (n >= 1 && n <= 9) selectType(PALETTE[n - 1]);
 });
-
 window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
 function tryPlaceAt(gx, gz) {
@@ -2766,7 +2717,6 @@ function tryPlaceAt(gx, gz) {
   playBuildSound();
   updateUI();
 }
-
 function rotateBuilding(b) {
   if (!BUILDING_DEFS[b.type].rotatable) return;
   b.rot = (b.rot + 1) % 4;
@@ -2780,16 +2730,16 @@ function rotateBuilding(b) {
 function saveGame() {
   if (!baseBuilding || state.gameOver) return false;
   const data = {
-    version: 3,
-    timestamp: Date.now(),
+    version: 4, timestamp: Date.now(),
     state: {
       iron: state.iron, copper: state.copper, coal: state.coal, stone: state.stone,
       ironOre: state.ironOre, copperOre: state.copperOre,
-      researchPoints: state.researchPoints,
-      techs: { ...state.techs },
+      researchPoints: state.researchPoints, techs: { ...state.techs },
       difficulty: state.difficulty,
       wave: state.wave, waveTimer: state.waveTimer,
       inWave: state.inWave, spawnRemaining: state.spawnRemaining, spawnTimer: state.spawnTimer,
+      assaultSide: state.assaultSide, assaultActive: state.assaultActive,
+      sideHistory: state.sideHistory.map(h => h.map(v => v === Infinity ? null : v)),
     },
     tileType: Array.from(tileType),
     buildings: buildings.map(b => ({
@@ -2797,22 +2747,16 @@ function saveGame() {
       hp: b.hp, maxHp: b.maxHp, level: b.level,
       ironBuffer: b.ironBuffer, copperBuffer: b.copperBuffer,
       processing: b.processing, lastProcessed: b.lastProcessed,
-      liquidStorage: { ...b.liquidStorage },
-      fuel: b.fuel, charge: b.charge,
+      liquidStorage: { ...b.liquidStorage }, fuel: b.fuel, charge: b.charge,
     })),
     cam: { x: camTarget.x, z: camTarget.z, zoom: camZoom },
   };
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    return true;
-  } catch (e) { console.error('Save failed:', e); return false; }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true; }
+  catch (e) { console.error('Save failed:', e); return false; }
 }
-function hasSave() {
-  try { return !!localStorage.getItem(SAVE_KEY); } catch(e) { return false; }
-}
-function deleteSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
-}
+function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch(e) { return false; } }
+function deleteSave() { try { localStorage.removeItem(SAVE_KEY); } catch(e) {} }
+
 function loadGame() {
   let data;
   try {
@@ -2820,11 +2764,8 @@ function loadGame() {
     if (!raw) return false;
     data = JSON.parse(raw);
   } catch (e) { return false; }
-
   clearAllScene();
-  if (data.tileType) {
-    for (let i = 0; i < data.tileType.length && i < tileType.length; i++) tileType[i] = data.tileType[i];
-  }
+  if (data.tileType) for (let i = 0; i < data.tileType.length && i < tileType.length; i++) tileType[i] = data.tileType[i];
   buildTerrainMesh();
 
   const s = data.state;
@@ -2839,12 +2780,15 @@ function loadGame() {
   state.inWave = s.inWave || false;
   state.spawnRemaining = s.spawnRemaining || 0;
   state.spawnTimer = s.spawnTimer || 0;
+  state.assaultSide = s.assaultSide ?? null;
+  state.assaultActive = s.assaultActive || false;
+  state.sideHistory = (s.sideHistory || []).map(h => h.map(v => v === null ? Infinity : v));
+  state.currentWaveSideDist = [Infinity, Infinity, Infinity, Infinity];
   state.gameOver = false;
 
   for (const bd of data.buildings) {
     const b = addBuilding(bd.type, bd.gx, bd.gz, bd.rot, true);
-    b.hp = bd.hp; b.maxHp = bd.maxHp;
-    b.level = bd.level || 1;
+    b.hp = bd.hp; b.maxHp = bd.maxHp; b.level = bd.level || 1;
     if (b.level === 2) addUpgradeMarker(b);
     if (b.type === 'battery' && b.level === 2) b.maxCharge = BATTERY_MAX_CHARGE * 2;
     if (bd.type === 'base') baseBuilding = b;
@@ -2856,54 +2800,36 @@ function loadGame() {
     if (bd.fuel !== undefined) b.fuel = bd.fuel;
     if (bd.charge !== undefined) b.charge = bd.charge;
   }
-
-  if (data.cam) {
-    camTarget.x = data.cam.x;
-    camTarget.z = data.cam.z;
-    camZoom = data.cam.zoom || 1;
-  }
+  if (data.cam) { camTarget.x = data.cam.x; camTarget.z = data.cam.z; camZoom = data.cam.zoom || 1; }
   updateCamera();
   refreshPalette();
   refreshTechPanel();
+  markPowerDirty();
   return true;
 }
 
 function clearAllScene() {
-  for (const b of [...buildings]) {
-    scene.remove(b.mesh);
-    b.mesh.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose?.(); });
-  }
+  for (const b of [...buildings]) { scene.remove(b.mesh); b.mesh.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose?.(); }); }
   buildings.length = 0;
   for (const type in buildingsByType) buildingsByType[type].length = 0;
-  occupancy.clear();
-  baseBuilding = null;
-
-  for (const e of enemies) scene.remove(e.mesh);
-  enemies.length = 0;
+  occupancy.clear(); baseBuilding = null;
+  for (const e of enemies) scene.remove(e.mesh); enemies.length = 0;
   for (const bs of bosses) {
     scene.remove(bs.mesh);
-    for (const leg of bs.legs) {
-      scene.remove(leg.thighMesh); scene.remove(leg.shinMesh); scene.remove(leg.footMesh);
-    }
+    for (const leg of bs.legs) { scene.remove(leg.thighMesh); scene.remove(leg.shinMesh); scene.remove(leg.footMesh); }
     if (bs.breathCone) scene.remove(bs.breathCone);
   }
   bosses.length = 0;
-  for (const bl of bullets) scene.remove(bl.mesh);
-  bullets.length = 0;
+  for (const bl of bullets) scene.remove(bl.mesh); bullets.length = 0;
   for (const p of particles) { scene.remove(p.mesh); p.mat.dispose(); }
-  particles.length = 0;
-  particlePool.length = 0;
-  for (const x of explosions) scene.remove(x.mesh);
-  explosions.length = 0;
-  for (const x of arcBeams) scene.remove(x.mesh);
-  arcBeams.length = 0;
-  for (const x of shockwaves) scene.remove(x.mesh);
-  shockwaves.length = 0;
-  for (const d of demolishMeshes) scene.remove(d.mesh);
-  demolishMeshes.length = 0;
+  particles.length = 0; particlePool.length = 0;
+  for (const x of explosions) scene.remove(x.mesh); explosions.length = 0;
+  for (const x of arcBeams) scene.remove(x.mesh); arcBeams.length = 0;
+  for (const x of shockwaves) scene.remove(x.mesh); shockwaves.length = 0;
+  for (const d of demolishMeshes) scene.remove(d.mesh); demolishMeshes.length = 0;
   priorityTarget = null;
-
   removeTerrainMesh();
+  markPowerDirty();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2919,13 +2845,13 @@ const elGameOver = $('gameover'), elGoText = $('goText');
 const elBossBox = $('bossBox'), elBossName = $('bossName'), elBossFill = $('bossFill');
 const elTitleScreen = $('titleScreen');
 const elSaveToast = $('saveToast');
+const elAssaultBanner = $('assaultBanner'), elAssaultBannerSub = $('assaultBannerSub');
 const elBtnContinue = $('btnContinue'), elBtnDeleteSave = $('btnDeleteSave');
 const elPanelBuild = $('panelBuild'), elPanelTech = $('panelTech');
 const elTechBadge = $('techBadge');
 
 PALETTE.forEach((type, i) => {
-  const def = BUILDING_DEFS[type];
-  const ic = PALETTE_ICONS[type];
+  const def = BUILDING_DEFS[type], ic = PALETTE_ICONS[type];
   const btn = document.createElement('button');
   btn.className = 'build-btn';
   btn.dataset.type = type;
@@ -2954,21 +2880,15 @@ function refreshTechPanel() {
     const div = document.createElement('div');
     div.className = 'tech-item ' + (owned ? 'owned' : available ? 'available' : 'locked');
     div.innerHTML = `
-      <div class="tech-header">
-        <div class="tech-name">${tech.name}</div>
-        <div class="tech-cost">${tech.cost} 点</div>
-      </div>
+      <div class="tech-header"><div class="tech-name">${tech.name}</div><div class="tech-cost">${tech.cost} 点</div></div>
       <div class="tech-desc">${tech.desc}</div>
-      <div class="tech-unlocks">
-        ${tech.unlocks.map(u => `<span class="tech-unlock-tag">${BUILDING_DEFS[u].name}</span>`).join('')}
-      </div>
+      <div class="tech-unlocks">${tech.unlocks.map(u => `<span class="tech-unlock-tag">${BUILDING_DEFS[u].name}</span>`).join('')}</div>
       <div class="tech-status">${owned ? '已拥有' : available ? '可研究' : '未解锁'}</div>
     `;
     if (!owned && available) div.addEventListener('click', () => researchTech(techId));
     elPanelTech.appendChild(div);
   }
 }
-
 function refreshPalette() {
   document.querySelectorAll('.build-btn').forEach(btn => {
     const type = btn.dataset.type;
@@ -2997,19 +2917,29 @@ function updateUI() {
   elWave.textContent = state.wave;
 
   if (state.inWave) {
-    const totalEnemies = enemies.length + state.spawnRemaining;
-    const flyingCount = enemies.filter(e => e.isFlying).length;
-    elWaveCd.textContent = flyingCount > 0 ? `敌人 ${totalEnemies} ✈${flyingCount}` : `敌人 ${totalEnemies}`;
-    elWaveCd.classList.remove('warning', 'danger');
+    const total = enemies.length + state.spawnRemaining;
+    const flying = enemies.filter(e => e.isFlying).length;
+    elWaveCd.textContent = flying > 0 ? `敌人 ${total} ✈${flying}` : `敌人 ${total}`;
+    elWaveCd.classList.remove('warning', 'danger', 'assault');
     elWaveCd.style.color = '#ff7a8a';
     elWaveCd.style.textShadow = '0 0 14px rgba(255, 120, 140, 0.6)';
   } else {
     const secs = Math.ceil(state.waveTimer);
-    elWaveCd.textContent = `${secs}s`;
-    elWaveCd.style.color = '';
-    elWaveCd.style.textShadow = '';
-    elWaveCd.classList.toggle('warning', secs <= 15 && secs > 7);
-    elWaveCd.classList.toggle('danger', secs <= 7);
+    const isAssaultNext = isAssaultWave(state.wave + 1);
+    if (isAssaultNext) {
+      elWaveCd.textContent = `总攻 ${secs}s`;
+      elWaveCd.classList.add('assault');
+      elWaveCd.classList.remove('warning', 'danger');
+      elWaveCd.style.color = '';
+      elWaveCd.style.textShadow = '';
+    } else {
+      elWaveCd.textContent = `${secs}s`;
+      elWaveCd.classList.remove('assault');
+      elWaveCd.style.color = '';
+      elWaveCd.style.textShadow = '';
+      elWaveCd.classList.toggle('warning', secs <= 15 && secs > 7);
+      elWaveCd.classList.toggle('danger', secs <= 7);
+    }
   }
 
   if (bosses.length > 0) {
@@ -3017,25 +2947,27 @@ function updateUI() {
     elBossBox.classList.add('show');
     elBossName.textContent = bosses.length > 1 ? `${boss.name} (+${bosses.length - 1})` : boss.name;
     elBossFill.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
-  } else {
-    elBossBox.classList.remove('show');
-  }
+  } else elBossBox.classList.remove('show');
 
   const hpPct = baseBuilding ? (baseBuilding.hp / baseBuilding.maxHp) * 100 : 0;
   elHpFill.style.width = Math.max(0, hpPct) + '%';
-  elHpFill.style.background = hpPct > 60
-    ? 'linear-gradient(90deg, #46e0ff, #4cffb0)'
-    : hpPct > 25
-      ? 'linear-gradient(90deg, #ffb454, #ff8a3d)'
-      : 'linear-gradient(90deg, #ff5a6e, #ff2040)';
+  elHpFill.style.background = hpPct > 60 ? 'linear-gradient(90deg, #46e0ff, #4cffb0)'
+    : hpPct > 25 ? 'linear-gradient(90deg, #ffb454, #ff8a3d)'
+    : 'linear-gradient(90deg, #ff5a6e, #ff2040)';
 
   document.querySelectorAll('.build-btn').forEach(btn => {
     const def = BUILDING_DEFS[btn.dataset.type];
     btn.classList.toggle('poor', !canAfford(def.cost) || !isBuildingUnlocked(btn.dataset.type));
   });
-
   elTechBadge.textContent = state.researchPoints;
   elTechBadge.classList.toggle('hot', state.researchPoints > 0);
+}
+
+function showAssaultBanner(side) {
+  elAssaultBannerSub.textContent = `敌人将从${SIDE_NAMES[side]}集中进攻`;
+  elAssaultBanner.classList.add('show');
+  clearTimeout(showAssaultBanner._tid);
+  showAssaultBanner._tid = setTimeout(() => elAssaultBanner.classList.remove('show'), 3500);
 }
 
 function showInspector(b) {
@@ -3043,41 +2975,35 @@ function showInspector(b) {
   inspectedBuilding = b;
   const def = BUILDING_DEFS[b.type];
   let extra = '';
-
   if (b.type === 'conveyor') {
     extra = `<div class="insp-row"><span>朝向</span><span>${DIR_NAMES[b.rot]}</span></div>
       <div class="insp-row"><span>载物</span><span>${b.item ? ITEM_INFO[b.item.kind].name : '空'}</span></div>`;
   } else if (b.type === 'mine') {
-    const oreType = tileType[idx(b.gx, b.gz)];
-    const oreName = oreType === ORE_IRON ? '铁矿' : oreType === ORE_COPPER ? '铜矿' : oreType === ORE_COAL ? '煤矿' : '无';
-    extra = `<div class="insp-row"><span>矿脉</span><span>${oreName}</span></div>
+    const ot = tileType[idx(b.gx, b.gz)];
+    const on = ot === ORE_IRON ? '铁矿' : ot === ORE_COPPER ? '铜矿' : ot === ORE_COAL ? '煤矿' : '无';
+    extra = `<div class="insp-row"><span>矿脉</span><span>${on}</span></div>
       <div class="insp-row"><span>效率</span><span>${b.powered ? '×4 ⚡' : '×1'}${b.level === 2 ? ' ×2 🏅' : ''}</span></div>`;
   } else if (b.type === 'furnace') {
-    const procName = b.processing ? ITEM_INFO[b.processing].name : '空闲';
-    extra = `<div class="insp-row"><span>状态</span><span>${procName}</span></div>
+    extra = `<div class="insp-row"><span>状态</span><span>${b.processing ? ITEM_INFO[b.processing].name : '空闲'}</span></div>
       <div class="insp-row"><span>铁矿石</span><span>${b.ironBuffer}</span></div>
       <div class="insp-row"><span>铜矿石</span><span>${b.copperBuffer}</span></div>
       <div class="insp-row"><span>效率</span><span>${b.powered ? '×4 ⚡' : '×1'}${b.level === 2 ? ' ×2 🏅' : ''}</span></div>`;
   } else if (b.type === 'liquefier') {
-    let lines = '';
     const keys = ALL_ITEM_KINDS.filter(k => b.liquidStorage[k] > 0);
-    if (!keys.length) lines = `<div class="insp-row"><span>储液</span><span>空</span></div>`;
-    else for (const k of keys) lines += `<div class="insp-row"><span>${ITEM_INFO[k].name}</span><span>${b.liquidStorage[k]}</span></div>`;
-    extra = lines;
+    extra = keys.length ? keys.map(k => `<div class="insp-row"><span>${ITEM_INFO[k].name}</span><span>${b.liquidStorage[k]}</span></div>`).join('')
+      : `<div class="insp-row"><span>储液</span><span>空</span></div>`;
   } else if (b.type === 'pipe') {
     extra = `<div class="insp-row"><span>作用</span><span>液体传输</span></div>`;
   } else if (b.type === 'powerplant') {
-    const burn = b.level === 2 ? 20 : 10;
     extra = `<div class="insp-row"><span>燃料</span><span>${b.fuel} / ${b.maxFuel} 煤</span></div>
-      <div class="insp-row"><span>燃烧周期</span><span>${burn}s${b.level === 2 ? ' 🏅' : ''}</span></div>
+      <div class="insp-row"><span>燃烧周期</span><span>${b.level === 2 ? 20 : 10}s${b.level === 2 ? ' 🏅' : ''}</span></div>
       <div class="insp-row"><span>状态</span><span>${b.active ? '运行中 ⚡' : '缺煤'}</span></div>`;
   } else if (b.type === 'cable') {
     extra = `<div class="insp-row"><span>作用</span><span>电力传输</span></div>`;
   } else if (b.type === 'gridgen') {
     const r = b.level === 2 ? GRIDGEN_RADIUS_LV2 : GRIDGEN_RADIUS;
-    const cnt = buildings.filter(x => !x.disabled &&
-      Math.abs(x.gx - b.gx) <= r && Math.abs(x.gz - b.gz) <= r).length;
-    extra = `<div class="insp-row"><span>范围</span><span>${r * 2}×${r * 2}${b.level === 2 ? ' 🏅' : ''}</span></div>
+    const cnt = buildings.filter(x => !x.disabled && Math.abs(x.gx - b.gx) <= r && Math.abs(x.gz - b.gz) <= r).length;
+    extra = `<div class="insp-row"><span>范围</span><span>${r*2}×${r*2}${b.level === 2 ? ' 🏅' : ''}</span></div>
       <div class="insp-row"><span>覆盖建筑</span><span>${cnt}</span></div>
       <div class="insp-row"><span>状态</span><span style="color:${b.powered ? '#7dffb0' : '#ff7a8a'}">${b.powered ? '供电中 ⚡' : '未通电'}</span></div>`;
   } else if (b.type === 'battery') {
@@ -3086,19 +3012,16 @@ function showInspector(b) {
       <div class="insp-row"><span>状态</span><span>${b.charge > 0 ? (b.isCharging ? '充电中 ⚡' : '供电中') : '无电'}</span></div>
       <div class="insp-row"><span>警告</span><span style="color:#ff7a8a">被摧毁时爆炸</span></div>`;
   } else if (b.type === 'turret') {
-    const lvlMul = b.level === 2 ? 1.4 : 1;
+    const lm = b.level === 2 ? 1.4 : 1;
     extra = `<div class="insp-row"><span>射程</span><span>${TURRET_RANGE}</span></div>
       <div class="insp-row"><span>伤害</span><span>${TURRET_DMG}</span></div>
-      <div class="insp-row"><span>射速</span><span>${(b.powered ? TURRET_RATE * 4 * lvlMul : TURRET_RATE * lvlMul).toFixed(1)} / 秒${b.powered ? ' ⚡' : ''}${b.level === 2 ? ' 🏅' : ''}</span></div>
+      <div class="insp-row"><span>射速</span><span>${(b.powered ? TURRET_RATE * 4 * lm : TURRET_RATE * lm).toFixed(1)} / 秒${b.powered ? ' ⚡' : ''}${b.level === 2 ? ' 🏅' : ''}</span></div>
       <div class="insp-row"><span>目标</span><span>地面</span></div>`;
   } else if (b.type === 'highcannon') {
-    const eff = b.powered ? HIGH_POWER_MUL : 1;
-    const lvlMul = b.level === 2 ? 1.4 : 1;
-    const dmg = TURRET_DMG * HIGH_DMG_MUL * eff * lvlMul;
-    const rate = TURRET_RATE * HIGH_RATE_MUL * eff * lvlMul;
+    const eff = b.powered ? HIGH_POWER_MUL : 1, lm = b.level === 2 ? 1.4 : 1;
     extra = `<div class="insp-row"><span>射程</span><span>${TURRET_RANGE}</span></div>
-      <div class="insp-row"><span>伤害</span><span>${dmg} / 发${b.powered ? ' (×16)' : ' (×4)'}${b.level === 2 ? ' 🏅' : ''}</span></div>
-      <div class="insp-row"><span>射速</span><span>${rate.toFixed(1)} / 秒${b.powered ? ' ⚡' : ''}</span></div>
+      <div class="insp-row"><span>伤害</span><span>${TURRET_DMG * HIGH_DMG_MUL * eff * lm}${b.powered ? ' (×16)' : ' (×4)'}${b.level === 2 ? ' 🏅' : ''}</span></div>
+      <div class="insp-row"><span>射速</span><span>${(TURRET_RATE * HIGH_RATE_MUL * eff * lm).toFixed(1)} / 秒${b.powered ? ' ⚡' : ''}</span></div>
       <div class="insp-row"><span>目标</span><span>地面</span></div>`;
   } else if (b.type === 'arccannon') {
     extra = `<div class="insp-row"><span>射程</span><span>${ARC_RANGE}</span></div>
@@ -3107,60 +3030,43 @@ function showInspector(b) {
       <div class="insp-row"><span>目标</span><span>空中 + 地面</span></div>
       <div class="insp-row"><span>供电</span><span style="color:${b.powered ? '#7dffb0' : '#ff7a8a'}">${b.powered ? '已通电 ⚡' : '必须通电'}</span></div>`;
   } else if (b.type === 'antiair') {
-    const eff = b.powered ? 2 : 1;
-    const lvlMul = b.level === 2 ? 1.5 : 1;
-    const dmg = ANTIAIR_DMG * lvlMul;
-    const rate = ANTIAIR_RATE * eff * lvlMul;
+    const eff = b.powered ? 2 : 1, lm = b.level === 2 ? 1.5 : 1;
     extra = `<div class="insp-row"><span>射程</span><span>${ANTIAIR_RANGE}</span></div>
-      <div class="insp-row"><span>伤害</span><span>${dmg}${b.level === 2 ? ' 🏅' : ''}</span></div>
-      <div class="insp-row"><span>射速</span><span>${rate.toFixed(1)} / 秒${b.powered ? ' ⚡' : ''}</span></div>
+      <div class="insp-row"><span>伤害</span><span>${ANTIAIR_DMG * lm}${b.level === 2 ? ' 🏅' : ''}</span></div>
+      <div class="insp-row"><span>射速</span><span>${(ANTIAIR_RATE * eff * lm).toFixed(1)} / 秒${b.powered ? ' ⚡' : ''}</span></div>
       <div class="insp-row"><span>目标</span><span style="color:#5cf0a0">仅空中 ✈</span></div>`;
   } else if (b.type === 'base') {
     extra = `<div class="insp-row"><span>说明</span><span>不可拆除</span></div>`;
   }
 
   const rotBtn = def.rotatable
-    ? `<button class="insp-btn" id="inspRotate">↻ 旋转至 ${DIR_NAMES[(b.rot + 1) % 4]} (R)</button>`
-    : '';
+    ? `<button class="insp-btn" id="inspRotate">↻ 旋转至 ${DIR_NAMES[(b.rot + 1) % 4]} (R)</button>` : '';
 
   let upgradeHTML = '';
   if (!UNUPGRADABLE.has(b.type)) {
-    const canUpgrade = b.level < 2;
     const cost = UPGRADES[b.type];
-    if (canUpgrade && cost) {
-      const affordable = canAfford(cost);
-      const costStr = Object.entries(cost)
-        .map(([k, v]) => `${k === 'iron' ? '铁' : k === 'copper' ? '铜' : '石'}${v}`).join(' ');
-      upgradeHTML = `<button class="insp-btn upgrade" id="inspUpgrade" ${affordable ? '' : 'disabled'}>
-        ⬆ 升级至 Lv.2 · ${costStr}
-      </button>`;
+    if (b.level < 2 && cost) {
+      const costStr = Object.entries(cost).map(([k, v]) => `${k === 'iron' ? '铁' : k === 'copper' ? '铜' : '石'}${v}`).join(' ');
+      upgradeHTML = `<button class="insp-btn upgrade" id="inspUpgrade" ${canAfford(cost) ? '' : 'disabled'}>⬆ 升级至 Lv.2 · ${costStr}</button>`;
     } else if (b.level >= 2) {
       upgradeHTML = `<button class="insp-btn upgrade" disabled>🏅 已满级 Lv.2</button>`;
     }
   }
 
   const lvlBadge = b.level === 2 ? `<span class="lvl-badge">Lv.2 🏅</span>` : '';
-
   elInspector.innerHTML = `
     <div id="inspTitle">${def.name}${lvlBadge}</div>
     <div id="inspSub">坐标 ${b.gx}, ${b.gz}${b.powered ? ' · 已通电 ⚡' : ''}${b.disabled ? ' · <span style="color:#ff7a8a">已瘫痪</span>' : ''}</div>
     <div class="insp-row"><span>耐久</span><span>${Math.ceil(b.hp)} / ${Math.ceil(b.maxHp)}</span></div>
-    ${extra}
-    ${upgradeHTML}
-    ${rotBtn}
+    ${extra}${upgradeHTML}${rotBtn}
   `;
   elInspector.classList.add('show');
-
-  const rotBtnEl = $('inspRotate');
-  if (rotBtnEl) rotBtnEl.addEventListener('click', (e) => { e.stopPropagation(); playClickSound(); rotateBuilding(b); });
-  const upgradeBtn = $('inspUpgrade');
-  if (upgradeBtn && !upgradeBtn.disabled) {
-    upgradeBtn.addEventListener('click', (e) => { e.stopPropagation(); upgradeBuilding(b); });
-  }
+  const rb = $('inspRotate');
+  if (rb) rb.addEventListener('click', (e) => { e.stopPropagation(); playClickSound(); rotateBuilding(b); });
+  const ub = $('inspUpgrade');
+  if (ub && !ub.disabled) ub.addEventListener('click', (e) => { e.stopPropagation(); upgradeBuilding(b); });
 }
-
 function hideInspector() { elInspector.classList.remove('show'); inspectedBuilding = null; }
-
 function triggerGameOver() {
   if (state.gameOver) return;
   state.gameOver = true;
@@ -3169,7 +3075,6 @@ function triggerGameOver() {
   deleteSave();
   playExplosionSound(2.5);
 }
-
 function showSaveToast(text = '已保存') {
   elSaveToast.textContent = text;
   elSaveToast.classList.add('show');
@@ -3178,7 +3083,60 @@ function showSaveToast(text = '已保存') {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   26. 主循环（优化）
+   26. 教程
+   ═══════════════════════════════════════════════════════════ */
+const TUTORIAL_STEPS = [
+  { text: '欢迎来到工厂前线！你的目标是通过建造自动化工厂生产资源，同时保护基地免受敌人进攻。', tip: '基地被摧毁即游戏结束' },
+  { text: '点击左侧建筑栏中的"矿井"（快捷键 1），然后点击带有红褐色矿脉的地面来放置。', tip: '有红褐色矿脉的格子可以开采铁矿' },
+  { text: '用传送带（快捷键 2）把矿井连接到基地。按 R 旋转建筑，长按左键可以拆除。', tip: '物品会自动沿传送带流向基地' },
+  { text: '建造炮塔（快捷键 8）抵御敌人。第 3 波开始会出现飞行敌人，需要先研究"防空技术"并建造防空炮。', tip: '点击敌人可让所有炮塔优先攻击它' },
+  { text: '每 2 波会有一次"总攻"，敌人和 Boss 会从之前进攻最接近基地的那一侧集中生成，注意防守薄弱的方向！', tip: '清空一波可获得研究点，用来解锁新建筑' },
+  { text: '祝你玩得开心！按 Ctrl+S 可以手动保存游戏。', tip: '右键空地取消选择，ESC 取消所有选择' },
+];
+let tutorialActive = false, tutorialStep = 0;
+
+function startTutorial() {
+  tutorialActive = true;
+  tutorialStep = 0;
+  renderTutorial();
+}
+function renderTutorial() {
+  let el = document.getElementById('tutorialBox');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tutorialBox';
+    document.body.appendChild(el);
+  }
+  const step = TUTORIAL_STEPS[tutorialStep];
+  el.innerHTML = `
+    <div class="tut-step">教程 ${tutorialStep + 1} / ${TUTORIAL_STEPS.length}</div>
+    <div class="tut-text">${step.text}</div>
+    <div class="tut-tip">💡 ${step.tip}</div>
+    <div class="tut-buttons">
+      <button class="tut-btn skip" id="tutSkip">跳过教程</button>
+      <button class="tut-btn next" id="tutNext">${tutorialStep === TUTORIAL_STEPS.length - 1 ? '开始游戏' : '下一步'}</button>
+    </div>
+  `;
+  $('tutSkip').onclick = () => { playClickSound(); endTutorial(); };
+  $('tutNext').onclick = () => {
+    playClickSound();
+    tutorialStep++;
+    if (tutorialStep >= TUTORIAL_STEPS.length) endTutorial();
+    else renderTutorial();
+  };
+}
+function endTutorial() {
+  tutorialActive = false;
+  const el = document.getElementById('tutorialBox');
+  if (el) el.remove();
+  try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch(e) {}
+}
+function isTutorialDone() {
+  try { return localStorage.getItem(TUTORIAL_KEY) === '1'; } catch(e) { return false; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   27. 主循环
    ═══════════════════════════════════════════════════════════ */
 function updateGhost() {
   if (!ghostMesh || !selectedType) return;
@@ -3217,38 +3175,35 @@ function animate(now) {
   requestAnimationFrame(animate);
   const dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
-  frameCounter++;
 
   if (gameStarted && !state.gameOver) {
     updateCameraInput(dt);
     beltTexture.offset.x -= dt * 1.3;
 
-    // 重置瘫痪标记
     for (const b of buildings) b.disabled = false;
 
-    // ─── 建筑逻辑 + 视觉（合并遍历）───
+    // 建筑逻辑
     for (const c of buildingsByType.conveyor) updateConveyor(c, dt);
     for (const m of buildingsByType.mine) updateMine(m, dt);
     for (const f of buildingsByType.furnace) updateFurnace(f, dt);
     for (const p of buildingsByType.powerplant) updatePowerPlant(p, dt);
-    for (const b of buildingsByType.battery) updateBatteryVisual(b, dt, now);
     for (const t of buildingsByType.turret) updateTurret(t, dt);
     for (const h of buildingsByType.highcannon) updateHighCannon(h, dt);
     for (const a of buildingsByType.arccannon) updateArcCannon(a, dt);
     for (const aa of buildingsByType.antiair) updateAntiAir(aa, dt);
 
-    // 电力网络（内部限频）
-    updatePowerNetwork(dt);
+    // 电力（脏标记 + 节流）
+    updatePowerNetwork(now);
+    updateBatteries(dt);
 
-    // 管道网络（限频：每 6 帧）
+    // 管道（限频）
     pipeFrameCounter = (pipeFrameCounter + 1) % 6;
     if (pipeFrameCounter === 0) updatePipeNetwork();
 
-    // ─── 修复 / 视觉 / 物品（单次遍历）───
+    // 修复 / 视觉
     for (const b of buildings) {
       if (b.powered && b.hp < b.maxHp && !b.pendingRemove)
         b.hp = Math.min(b.maxHp, b.hp + REPAIR_RATE * dt);
-
       if (b.powerRing) {
         b.powerRing.visible = b.powered && !b.disabled;
         if (b.powered) {
@@ -3256,16 +3211,15 @@ function animate(now) {
           b.powerRing.material.opacity = 0.4 + Math.sin(now * 0.005) * 0.2;
         }
       }
-
       if (b.type === 'conveyor' && b.item) updateItemVisual(b);
-
+      if (b.type === 'battery') updateBatteryVisual(b, dt, now);
       switch (b.type) {
         case 'cable':
           if (b.mesh.userData.node) b.mesh.userData.node.scale.setScalar(1 + Math.sin(now * 0.006) * 0.12);
           break;
         case 'gridgen':
           if (b.mesh.userData.top) b.mesh.userData.top.rotation.y += dt * 2;
-          if (b.mesh.userData.aura) b.mesh.userData.aura.rotation.z += dt * 0.8;
+          if (b.mesh.userData.aura) b.mesh.userData.aura.rotation.z += dt * 0.6;
           break;
         case 'pipe':
           if (b.mesh.userData.liquidNode) b.mesh.userData.liquidNode.scale.setScalar(1 + Math.sin(now * 0.008) * 0.25);
@@ -3277,18 +3231,13 @@ function animate(now) {
           updateLiquefierVisual(b, now);
           break;
       }
-
       if (b.buildAnim) {
         b.buildAnim.t += dt;
         const t = Math.min(1, b.buildAnim.t / b.buildAnim.duration);
         const e = 1 - Math.pow(1 - t, 3);
         b.mesh.scale.set(e, e, e);
         b.mesh.position.y = (1 - e) * -0.4;
-        if (t >= 1) {
-          b.buildAnim = null;
-          b.mesh.scale.set(1, 1, 1);
-          b.mesh.position.y = 0;
-        }
+        if (t >= 1) { b.buildAnim = null; b.mesh.scale.set(1, 1, 1); b.mesh.position.y = 0; }
       }
       if (b.upgradeMarker) {
         b.upgradeMarker.position.y = Math.max(b.w, b.h) * 0.9 + 0.7 + Math.sin(now * 0.003) * 0.08;
@@ -3313,10 +3262,8 @@ function animate(now) {
         spawnDeathParticles(tileCenterX(target.gx), 0.4, tileCenterZ(target.gz), 0x88aaff, 5);
       }
     }
-
-    for (let i = buildings.length - 1; i >= 0; i--) {
+    for (let i = buildings.length - 1; i >= 0; i--)
       if (buildings[i].pendingRemove) removeBuilding(buildings[i], true);
-    }
 
     autosaveTimer += dt;
     if (autosaveTimer >= AUTOSAVE_INTERVAL) {
@@ -3325,7 +3272,7 @@ function animate(now) {
     }
   }
 
-  // 拆除动画
+  // 视觉特效
   for (let i = demolishMeshes.length - 1; i >= 0; i--) {
     const d = demolishMeshes[i];
     d.t += dt;
@@ -3336,96 +3283,70 @@ function animate(now) {
     d.mesh.rotation.y += dt * 6;
     if (t >= 1) { scene.remove(d.mesh); demolishMeshes.splice(i, 1); }
   }
-
-  // 爆炸
   for (let i = explosions.length - 1; i >= 0; i--) {
     const e = explosions[i];
     e.t += dt;
     const t = Math.min(1, e.t / e.duration);
     e.mesh.scale.setScalar(1 + t * 6);
     e.mesh.material.opacity = 1 - t;
-    if (t >= 1) {
-      scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose();
-      explosions.splice(i, 1);
-    }
+    if (t >= 1) { scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose(); explosions.splice(i, 1); }
   }
-
-  // 电弧
   for (let i = arcBeams.length - 1; i >= 0; i--) {
     const a = arcBeams[i];
     a.t += dt;
     const t = Math.min(1, a.t / a.duration);
     a.mesh.material.opacity = 0.9 * (1 - t);
     a.mesh.scale.x = 1 + t * 0.5; a.mesh.scale.z = 1 + t * 0.5;
-    if (t >= 1) {
-      scene.remove(a.mesh); a.mesh.geometry.dispose(); a.mesh.material.dispose();
-      arcBeams.splice(i, 1);
-    }
+    if (t >= 1) { scene.remove(a.mesh); a.mesh.geometry.dispose(); a.mesh.material.dispose(); arcBeams.splice(i, 1); }
   }
-
-  // 冲击波
   for (let i = shockwaves.length - 1; i >= 0; i--) {
     const s = shockwaves[i];
     s.t += dt;
     const t = Math.min(1, s.t / s.duration);
     s.mesh.scale.setScalar(1 + t * 8);
     s.mesh.material.opacity = 1 - t;
-    if (t >= 1) {
-      scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose();
-      shockwaves.splice(i, 1);
-    }
+    if (t >= 1) { scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose(); shockwaves.splice(i, 1); }
   }
 
-  if (gameStarted) {
-    updateGhost();
-    updateCamera();
-    updateUI();
-  }
-
+  if (gameStarted) { updateGhost(); updateCamera(); updateUI(); }
   renderer.render(scene, camera);
 }
 
 /* ═══════════════════════════════════════════════════════════
-   27. 初始化
+   28. 初始化
    ═══════════════════════════════════════════════════════════ */
-function startNewGame(difficulty) {
+function startNewGame(difficulty, showTutorial = false) {
   clearAllScene();
-
   Object.assign(state, {
     iron: 40, copper: 40, coal: 15, stone: 60,
     ironOre: 0, copperOre: 0,
-    researchPoints: 0,
-    techs: {},
+    researchPoints: 0, techs: {},
     difficulty: difficulty || 'hard',
     wave: 0,
     waveTimer: difficulty === 'easy' ? 120 : 60,
-    inWave: false, spawnRemaining: 0, spawnTimer: 0,
-    gameOver: false,
+    inWave: false, spawnRemaining: 0, spawnTimer: 0, gameOver: false,
+    assaultSide: null, assaultActive: false,
+    sideHistory: [], currentWaveSideDist: [Infinity, Infinity, Infinity, Infinity],
   });
   priorityTarget = null;
-  frameCounter = 0;
   pipeFrameCounter = 0;
-
   generateTerrain();
   buildTerrainMesh();
 
   const bgx = GRID / 2 - 1, bgz = GRID / 2 - 1;
   baseBuilding = addBuilding('base', bgx, bgz, 0, true);
-
   camTarget.set(0, 0, 0);
   camZoom = 1;
   updateCamera();
-
   selectType('mine');
   hideInspector();
   elGameOver.classList.remove('show');
-
-  refreshPalette();
-  refreshTechPanel();
-  updateUI();
-
+  refreshPalette(); refreshTechPanel(); updateUI();
   autosaveTimer = 0;
   gameStarted = true;
+  markPowerDirty();
+
+  if (showTutorial) startTutorial();
 }
 
 function continueGame() {
@@ -3436,9 +3357,7 @@ function continueGame() {
     autosaveTimer = 0;
     gameStarted = true;
     updateUI();
-  } else {
-    startNewGame('hard');
-  }
+  } else startNewGame('hard');
 }
 
 function updateTitleButtons() {
@@ -3471,16 +3390,15 @@ function showDifficultySelect() {
       font-family:inherit;font-size:12px;cursor:pointer;letter-spacing:1px;">取消</button>
   `;
   document.body.appendChild(overlay);
-  overlay.querySelector('#diffEasy').onclick = () => {
+  const beginGame = (diff) => {
     playClickSound(); overlay.remove();
     if (hasSave() && !confirm('已有存档，开始新游戏会覆盖旧存档。是否继续？')) return;
-    deleteSave(); elTitleScreen.classList.add('hide'); startNewGame('easy');
+    deleteSave(); elTitleScreen.classList.add('hide');
+    const showTut = !isTutorialDone();
+    startNewGame(diff, showTut);
   };
-  overlay.querySelector('#diffHard').onclick = () => {
-    playClickSound(); overlay.remove();
-    if (hasSave() && !confirm('已有存档，开始新游戏会覆盖旧存档。是否继续？')) return;
-    deleteSave(); elTitleScreen.classList.add('hide'); startNewGame('hard');
-  };
+  overlay.querySelector('#diffEasy').onclick = () => beginGame('easy');
+  overlay.querySelector('#diffHard').onclick = () => beginGame('hard');
   overlay.querySelector('#diffCancel').onclick = () => { playClickSound(); overlay.remove(); };
 }
 
@@ -3495,7 +3413,7 @@ $('btnRetry').addEventListener('click', () => {
   playClickSound();
   elGameOver.classList.remove('show');
   const diff = state.difficulty || 'hard';
-  deleteSave(); startNewGame(diff);
+  deleteSave(); startNewGame(diff, false);
 });
 $('btnBackToTitle').addEventListener('click', () => {
   playClickSound();
@@ -3504,10 +3422,7 @@ $('btnBackToTitle').addEventListener('click', () => {
   elTitleScreen.classList.remove('hide');
   updateTitleButtons();
 });
-
-window.addEventListener('blur', () => {
-  if (gameStarted && !state.gameOver) saveGame();
-});
+window.addEventListener('blur', () => { if (gameStarted && !state.gameOver) saveGame(); });
 window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   updateCamera();
